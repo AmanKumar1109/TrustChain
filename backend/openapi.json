@@ -1,0 +1,340 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "TrustChain Web3 Supply Chain & Anti-Counterfeit Platform API",
+    "version": "1.0.0",
+    "description": "Production REST API for TrustChain Web3 supply chain verification, Merkle serialization, consumer warranty claims, loyalty tokens, and manufacturer billing."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/api/v1",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "summary": "Register new user account",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Authenticate user and receive JWT token",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful with JWT"
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Get current authenticated profile",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile data"
+          }
+        }
+      }
+    },
+    "/verify/{code}": {
+      "get": {
+        "summary": "Public verification of QR code with Merkle proof & clone detection",
+        "tags": [
+          "Verification"
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verification outcome"
+          }
+        }
+      }
+    },
+    "/batches": {
+      "get": {
+        "summary": "List manufacturer batches",
+        "tags": [
+          "Batches"
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch list"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create serialized batch with Merkle root",
+        "tags": [
+          "Batches"
+        ],
+        "responses": {
+          "201": {
+            "description": "Batch created"
+          }
+        }
+      }
+    },
+    "/batches/{id}/recall": {
+      "post": {
+        "summary": "Emergency recall of product batch",
+        "tags": [
+          "Batches"
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch recalled"
+          }
+        }
+      }
+    },
+    "/units/sell": {
+      "post": {
+        "summary": "Retailer point-of-sale transfer & claim token issue",
+        "tags": [
+          "Retail Sales"
+        ],
+        "responses": {
+          "200": {
+            "description": "Sale recorded"
+          }
+        }
+      }
+    },
+    "/units/claim": {
+      "post": {
+        "summary": "Consumer warranty claim with OTP & claim token",
+        "tags": [
+          "Consumer"
+        ],
+        "responses": {
+          "200": {
+            "description": "Ownership claimed"
+          }
+        }
+      }
+    },
+    "/units/my-products": {
+      "get": {
+        "summary": "Consumer claimed products list",
+        "tags": [
+          "Consumer"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of products"
+          }
+        }
+      }
+    },
+    "/rewards/balance": {
+      "get": {
+        "summary": "Consumer TrustPoints token balance",
+        "tags": [
+          "Rewards"
+        ],
+        "responses": {
+          "200": {
+            "description": "Token balance"
+          }
+        }
+      }
+    },
+    "/reports": {
+      "post": {
+        "summary": "Submit crowdsourced counterfeit report",
+        "tags": [
+          "Reports"
+        ],
+        "responses": {
+          "201": {
+            "description": "Report created"
+          }
+        }
+      }
+    },
+    "/reports/hotspots": {
+      "get": {
+        "summary": "Manufacturer counterfeit risk heatmap & top areas",
+        "tags": [
+          "Reports"
+        ],
+        "responses": {
+          "200": {
+            "description": "Hotspot geospatial data"
+          }
+        }
+      }
+    },
+    "/analytics/overview": {
+      "get": {
+        "summary": "Manufacturer KPI overview stats",
+        "tags": [
+          "Analytics"
+        ],
+        "responses": {
+          "200": {
+            "description": "Analytics KPIs"
+          }
+        }
+      }
+    },
+    "/billing/overview": {
+      "get": {
+        "summary": "Prepaid serialization credits balance & plan",
+        "tags": [
+          "Billing"
+        ],
+        "responses": {
+          "200": {
+            "description": "Billing overview"
+          }
+        }
+      }
+    },
+    "/billing/topup": {
+      "post": {
+        "summary": "Mock top-up payment with auto-generated tax invoice",
+        "tags": [
+          "Billing"
+        ],
+        "responses": {
+          "201": {
+            "description": "Credits added & invoice generated"
+          }
+        }
+      }
+    },
+    "/admin/health": {
+      "get": {
+        "summary": "System health, relayer gas credits & transaction queue",
+        "tags": [
+          "Admin"
+        ],
+        "responses": {
+          "200": {
+            "description": "System health telemetry"
+          }
+        }
+      }
+    },
+    "/admin/transactions/retry-all": {
+      "post": {
+        "summary": "Bulk retry all failed on-chain transactions",
+        "tags": [
+          "Admin"
+        ],
+        "responses": {
+          "200": {
+            "description": "Retry sweep results"
+          }
+        }
+      }
+    },
+    "/admin/listener": {
+      "get": {
+        "summary": "Smart contract event listener status & telemetry",
+        "tags": [
+          "Admin"
+        ],
+        "responses": {
+          "200": {
+            "description": "Listener telemetry"
+          }
+        }
+      }
+    },
+    "/admin/listener/reconcile": {
+      "post": {
+        "summary": "Trigger manual reconciliation sweep",
+        "tags": [
+          "Admin"
+        ],
+        "responses": {
+          "200": {
+            "description": "Reconciliation sweep completed"
+          }
+        }
+      }
+    }
+  }
+}

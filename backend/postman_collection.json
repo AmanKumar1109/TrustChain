@@ -1,0 +1,1917 @@
+{
+  "info": {
+    "_postman_id": "trustchain-platform-suite-v1",
+    "name": "TrustChain Web3 Provenance & Anti-Counterfeit Platform API",
+    "description": "Production API Collection for TrustChain: Web3 Merkle-tree serialization, anti-counterfeit scanning, warranty claims, partner custody transfers, loyalty rewards, manufacturer billing, and admin system health.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mfgToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "distToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "retailerToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "consumerToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "createdBatchId",
+      "value": "BATCH-2026-DEL99",
+      "type": "string"
+    },
+    {
+      "key": "createdUnitCode",
+      "value": "TC-8924-GENUINE",
+      "type": "string"
+    },
+    {
+      "key": "createdTransferId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication & Identity",
+      "item": [
+        {
+          "name": "Register User (Consumer / Partner)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rahul Sharma\",\n  \"email\": \"rahul.demo@example.com\",\n  \"password\": \"Password123!\",\n  \"phone\": \"+919876543299\",\n  \"role\": \"consumer\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login as Admin (Auto-saves adminToken)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.token) {",
+                  "  pm.collectionVariables.set('adminToken', res.data.token);",
+                  "  console.log('Saved adminToken!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@trustchain.com\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login as Manufacturer (Auto-saves mfgToken)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.token) {",
+                  "  pm.collectionVariables.set('mfgToken', res.data.token);",
+                  "  console.log('Saved mfgToken!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"mfg@cipla.com\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login as Distributor (Auto-saves distToken)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.token) {",
+                  "  pm.collectionVariables.set('distToken', res.data.token);",
+                  "  console.log('Saved distToken!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"distributor@apexlogistics.com\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login as Retailer (Auto-saves retailerToken)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.token) {",
+                  "  pm.collectionVariables.set('retailerToken', res.data.token);",
+                  "  console.log('Saved retailerToken!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"retailer@metrolife.com\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login as Consumer (Auto-saves consumerToken)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.token) {",
+                  "  pm.collectionVariables.set('consumerToken', res.data.token);",
+                  "  console.log('Saved consumerToken!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"consumer@gmail.com\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Current Logged-in User Profile (/auth/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logout (/auth/logout)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Brand Registration & KYB Compliance",
+      "item": [
+        {
+          "name": "Submit Brand Registration (KYB)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/brands/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "brands",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sun Pharma Laboratories\",\n  \"legalBusinessName\": \"Sun Pharmaceutical Industries Ltd\",\n  \"cin\": \"L24230GJ1993PLC019050\",\n  \"gstin\": \"24AAACS1234D1Z2\",\n  \"officialEmail\": \"contact@sunpharma.com\",\n  \"phone\": \"+919876500099\",\n  \"website\": \"https://sunpharma.com\",\n  \"categories\": [\n    \"Pharmaceuticals\",\n    \"Dermatology\"\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Brand Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/brands/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "brands",
+                "profile"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Product Catalog",
+      "item": [
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cipla Budecort Inhaler 200mcg\",\n  \"sku\": \"CIP-BUD-200\",\n  \"category\": \"Pharmaceuticals\",\n  \"description\": \"Budesonide inhalation powder corticosteroid.\",\n  \"mrp\": 320,\n  \"protectionLevelDefault\": \"Standard\",\n  \"warrantyPeriodMonths\": 24\n}"
+            }
+          }
+        },
+        {
+          "name": "List Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Product Categories",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/products/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "categories"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Batches, Serialization & Recalls",
+      "item": [
+        {
+          "name": "Create Batch (Merkle Tree & On-Chain Registration)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"batchNumber\": \"BATCH-2026-MUM77\",\n  \"productId\": \"REPLACE_WITH_PRODUCT_ID\",\n  \"quantity\": 10,\n  \"mfgDate\": \"2026-02-01\",\n  \"expiryDate\": \"2028-02-01\",\n  \"protectionLevel\": \"Standard\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Manufacturer Batches",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Batch Details & Merkle Root",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/batches/BATCH-2026-DEL99",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "BATCH-2026-DEL99"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Download High-Res QR ZIP Archive",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/batches/BATCH-2026-DEL99/qr-zip",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "BATCH-2026-DEL99",
+                "qr-zip"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Emergency Product Recall",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/batches/BATCH-2026-DEL99/recall",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "BATCH-2026-DEL99",
+                "recall"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Packaging integrity failure detected during secondary warehouse quality audit.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Recalled Batches",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/batches/recalls",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "recalls"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Supply Chain Partner Onboarding & Network",
+      "item": [
+        {
+          "name": "Invite Supply Chain Partner (Manufacturer/Distributor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/partners/invite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "partners",
+                "invite"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"National Cold Chain Ltd\",\n  \"email\": \"contact@nationalcoldchain.com\",\n  \"role\": \"distributor\",\n  \"contactPerson\": \"Vikram Malhotra\",\n  \"phone\": \"+919876500088\",\n  \"location\": {\n    \"city\": \"Bengaluru\",\n    \"state\": \"Karnataka\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Join Partner Network via Invite Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/partners/join-invite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "partners",
+                "join-invite"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"INVITE_TOKEN_FROM_STEP_ABOVE\",\n  \"password\": \"Password123!\",\n  \"gst\": \"29AAACN0123M1Z5\",\n  \"pan\": \"AAACN0123M\",\n  \"location\": {\n    \"address\": \"Plot 10, Peenya Industrial Area\",\n    \"city\": \"Bengaluru\",\n    \"state\": \"Karnataka\",\n    \"pincode\": \"560058\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Partner Self-Apply Directly",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/partners/self-apply",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "partners",
+                "self-apply"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"City Meds Retailers\",\n  \"email\": \"info@citymeds.com\",\n  \"password\": \"Password123!\",\n  \"role\": \"retailer\",\n  \"gst\": \"07AAACN5541M1Z2\",\n  \"contactPerson\": \"Anita Roy\",\n  \"phone\": \"+919876500055\",\n  \"location\": {\n    \"address\": \"Connaught Place\",\n    \"city\": \"Delhi\",\n    \"state\": \"Delhi\",\n    \"pincode\": \"110001\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "List Network Partners",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/partners?role=distributor&status=approved",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "partners"
+              ],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "distributor"
+                },
+                {
+                  "key": "status",
+                  "value": "approved"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Partner Reputation Score",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{distToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/partners/reputation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "partners",
+                "reputation"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Custody Transfers & Partner Inventory",
+      "item": [
+        {
+          "name": "Initiate Custody Transfer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transfers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"toUser\": \"REPLACE_WITH_DISTRIBUTOR_USER_ID\",\n  \"batchNumber\": \"BATCH-2026-DEL99\",\n  \"quantity\": 20\n}"
+            }
+          }
+        },
+        {
+          "name": "Accept Custody Transfer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{distToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transfers/TRANSFER_ID/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers",
+                "TRANSFER_ID",
+                "accept"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject Custody Transfer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{distToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transfers/TRANSFER_ID/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers",
+                "TRANSFER_ID",
+                "reject"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Damaged secondary boxes on arrival.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Partner Inventory",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{distToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "inventory"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Retail Sales & Claim Tokens",
+      "item": [
+        {
+          "name": "Record Retail Sale (/units/sell)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{retailerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/units/sell",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "units",
+                "sell"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unitCode\": \"TC-8924-GENUINE\",\n  \"customerPhone\": \"+919876543210\",\n  \"customerName\": \"Rahul Sharma\",\n  \"salePrice\": 185,\n  \"invoiceNumber\": \"INV-RET-2026-9081\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Retailer Sales History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{retailerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/units/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "units",
+                "sales"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Public QR Verification & Clone Detection",
+      "item": [
+        {
+          "name": "Verify Genuine Unit QR (/verify/:code)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/verify/TC-8924-GENUINE?city=Delhi&lat=28.6139&lng=77.2090",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "verify",
+                "TC-8924-GENUINE"
+              ],
+              "query": [
+                {
+                  "key": "city",
+                  "value": "Delhi"
+                },
+                {
+                  "key": "lat",
+                  "value": "28.6139"
+                },
+                {
+                  "key": "lng",
+                  "value": "77.2090"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Verify Clone Anomaly Trigger (Same code in Mumbai)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/verify/TC-CLONE-DELHI?city=Mumbai&lat=19.0760&lng=72.8777",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "verify",
+                "TC-CLONE-DELHI"
+              ],
+              "query": [
+                {
+                  "key": "city",
+                  "value": "Mumbai"
+                },
+                {
+                  "key": "lat",
+                  "value": "19.0760"
+                },
+                {
+                  "key": "lng",
+                  "value": "72.8777"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Verify Recalled Batch Unit",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/verify/TC-RECALL-99",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "verify",
+                "TC-RECALL-99"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Consumer Warranty & P2P Resale Transfer",
+      "item": [
+        {
+          "name": "Claim Product Ownership & Warranty (with OTP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{consumerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/units/claim",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "units",
+                "claim"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unitCode\": \"TC-SOLD-UNCLAIMED\",\n  \"claimToken\": \"CLM-TEST-TOK-123\",\n  \"otp\": \"123456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Consumer's Claimed Products (/units/my-products)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{consumerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/units/my-products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "units",
+                "my-products"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Initiate P2P Resale Transfer to Buyer Phone",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{consumerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/units/transfer-resale",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "units",
+                "transfer-resale"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unitCode\": \"TC-CLAIMED-UNIT\",\n  \"buyerPhone\": \"+919876500002\",\n  \"resalePrice\": 120\n}"
+            }
+          }
+        },
+        {
+          "name": "Get User Scan History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{consumerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/units/scan-history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "units",
+                "scan-history"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Loyalty Rewards & TrustPoints Tokens",
+      "item": [
+        {
+          "name": "Get Consumer Token Points Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{consumerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rewards/balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rewards",
+                "balance"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Scan Streak Progress",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{consumerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rewards/streak",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rewards",
+                "streak"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Referral Code & Earnings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{consumerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rewards/referral",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rewards",
+                "referral"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Rewards Store Catalog",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/rewards/offers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rewards",
+                "offers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Redeem Voucher with Points (Burn On-Chain)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{consumerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rewards/redeem",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rewards",
+                "redeem"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"offerId\": \"REPLACE_WITH_OFFER_ID\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Crowdsourced Counterfeit Reports & Hotspot Maps",
+      "item": [
+        {
+          "name": "Submit Counterfeit Report (Consumer / Guest)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{consumerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"TC-8924-GENUINE\",\n  \"shopName\": \"City Corner Meds\",\n  \"comment\": \"Cap seal had adhesive residue, medicine color smelled off.\",\n  \"geo\": {\n    \"city\": \"Delhi\",\n    \"state\": \"Delhi\",\n    \"address\": \"Chandni Chowk\",\n    \"latitude\": 28.6506,\n    \"longitude\": 77.2301\n  },\n  \"photos\": [\n    \"https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600\"\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Consumer's Submitted Reports",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{consumerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/my-reports",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "my-reports"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Manufacturer Hotspot Heatmap & Risk Areas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/hotspots?days=30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "hotspots"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Manufacturer Analytics & Telemetry",
+      "item": [
+        {
+          "name": "Overview KPI Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/overview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analytics",
+                "overview"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Scans Over Time (Timeseries)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/scans-over-time?days=30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analytics",
+                "scans-over-time"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "City-Wise Scan Distribution",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/city-scans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analytics",
+                "city-scans"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Scan Result Split (Genuine vs Suspicious vs Fake)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/scan-split",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analytics",
+                "scan-split"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Batch Performance Table",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/batch-performance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analytics",
+                "batch-performance"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "13. Manufacturer Billing & Invoices",
+      "item": [
+        {
+          "name": "Get Billing Overview & Credit Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/billing/overview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "billing",
+                "overview"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mock Top-Up Payment (UPI / Card)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/billing/topup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "billing",
+                "topup"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"credits\": 5000,\n  \"paymentMethod\": \"UPI\",\n  \"paymentDetails\": {\n    \"upiId\": \"cipla@okhdfcbank\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "List Tax Invoices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/billing/invoices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "billing",
+                "invoices"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upgrade Subscription Plan",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/billing/plan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "billing",
+                "plan"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"ENTERPRISE\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "14. Organization Settings & Team Management",
+      "item": [
+        {
+          "name": "Get Company Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/settings/company",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "settings",
+                "company"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Company Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/settings/company",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "settings",
+                "company"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"legalBusinessName\": \"Cipla Quality Pharmaceuticals Ltd\",\n  \"gstin\": \"27AAACC1206D1ZM\",\n  \"supportEmail\": \"support@cipla.com\",\n  \"supportPhone\": \"+912224826000\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Team Members",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/settings/team",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "settings",
+                "team"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Invite Team Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/settings/team",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "settings",
+                "team"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Kavita Nair\",\n  \"email\": \"kavita.nair@cipla.com\",\n  \"role\": \"Compliance\",\n  \"phone\": \"9820099887\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Notification Preferences",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mfgToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/settings/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "settings",
+                "notifications"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emailNotifications\": true,\n  \"lowCreditWarning\": true,\n  \"lowCreditThreshold\": 1500,\n  \"counterfeitAlerts\": true\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "15. Super Admin Governance, System Health & Event Listener",
+      "item": [
+        {
+          "name": "System Health & Network Gas Credits (/admin/health)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Retry All Failed Blockchain Transactions (/admin/transactions/retry-all)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/transactions/retry-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "transactions",
+                "retry-all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Inspect Live Event Listener Telemetry (/admin/listener)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/listener",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "listener"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Trigger Manual Reconciliation Sweep (/admin/listener/reconcile)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/listener/reconcile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "listener",
+                "reconcile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Platform-Wide Analytics (/admin/analytics)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/analytics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "analytics"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Platform Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?search=cipla",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "cipla"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Suspend User Account",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/USER_ID/suspend",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "USER_ID",
+                "suspend"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Repeated counterfeit report violations\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Activate User Account",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/USER_ID/activate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "USER_ID",
+                "activate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Review Counterfeit Report (Award Token Bounty)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/reports/REPORT_ID/review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "reports",
+                "REPORT_ID",
+                "review"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Valid\",\n  \"reviewNotes\": \"Field inspection confirmed counterfeit packaging.\",\n  \"pointsToAward\": 100\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

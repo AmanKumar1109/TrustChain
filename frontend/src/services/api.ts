@@ -378,10 +378,18 @@ class ApiService {
       return this.request('/billing/plan');
     },
 
-    topup: async (data: { amountInr: number; paymentMethod: 'UPI' | 'Card' | 'NetBanking' }) => {
+    topup: async (data: { amountInr?: number; amountINR?: number; paymentMethod?: string; upiId?: string; cardNumber?: string }) => {
+      const amountINR = Number(data.amountINR ?? data.amountInr ?? 1000);
+      let pm = (data.paymentMethod || 'UPI').toUpperCase();
+      if (pm.includes('CARD')) pm = 'CARD';
+      if (pm.includes('NET')) pm = 'NETBANKING';
       return this.request('/billing/topup', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          amountINR,
+          paymentMethod: pm,
+        }),
       });
     },
 

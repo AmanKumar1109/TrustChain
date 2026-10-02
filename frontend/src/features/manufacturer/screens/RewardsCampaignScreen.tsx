@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Gift,
   Sparkles,
@@ -9,7 +9,10 @@ import {
   CheckCircle2,
   Save,
   ArrowRight,
+  Loader2,
 } from 'lucide-react';
+import { api } from '../../../services/api';
+import { toast } from '../../../services/toast';
 
 export const RewardsCampaignScreen: React.FC = () => {
   const [pointsPerScan, setPointsPerScan] = useState(50);
@@ -17,10 +20,54 @@ export const RewardsCampaignScreen: React.FC = () => {
   const [referralBonus, setReferralBonus] = useState(100);
   const [fakeReportBonus, setFakeReportBonus] = useState(500);
   const [isSaved, setIsSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const handleSave = () => {
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2500);
+  // Load existing campaign settings from backend
+  useEffect(() => {
+    const fetchCampaign = async () => {
+      try {
+        setLoading(true);
+        const res = await api.rewards.getCampaign();
+        if (res.success && res.data?.campaign) {
+          const c = res.data.campaign;
+          if (c.pointsPerScan !== undefined) setPointsPerScan(c.pointsPerScan);
+          if (c.streakBonus !== undefined) setStreakBonus(c.streakBonus);
+          if (c.referralBonus !== undefined) setReferralBonus(c.referralBonus);
+          if (c.fakeReportBonus !== undefined) setFakeReportBonus(c.fakeReportBonus);
+        }
+      } catch (err) {
+        console.warn('Could not load campaign values:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCampaign();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await api.rewards.updateCampaign({
+        pointsPerScan,
+        streakBonus,
+        referralBonus,
+        fakeReportBonus,
+      });
+
+      if (res.success) {
+        setIsSaved(true);
+        toast.success('Reward campaign rules updated and active across consumer apps!');
+        setTimeout(() => setIsSaved(false), 2500);
+      } else {
+        toast.error(res.error?.message || 'Failed to save campaign rules');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error updating campaign settings');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -42,10 +89,15 @@ export const RewardsCampaignScreen: React.FC = () => {
         <button
           type="button"
           onClick={handleSave}
-          className="inline-flex items-center gap-2 bg-black text-white px-6 py-2.5 rounded-full text-xs font-medium hover:bg-gray-800 transition-colors shadow-sm cursor-pointer"
+          disabled={saving || loading}
+          className="inline-flex items-center gap-2 bg-black text-white px-6 py-2.5 rounded-full text-xs font-medium hover:bg-gray-800 transition-colors shadow-sm cursor-pointer disabled:opacity-50"
         >
-          <Save className="w-4 h-4" />
-          <span>{isSaved ? 'Campaign Updated ✓' : 'Save Campaign Settings'}</span>
+          {saving ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4" />
+          )}
+          <span>{saving ? 'Saving...' : isSaved ? 'Campaign Updated ✓' : 'Save Campaign Settings'}</span>
         </button>
       </div>
 
@@ -53,9 +105,17 @@ export const RewardsCampaignScreen: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Side: Campaign Configuration Form (7 cols) */}
         <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 border border-black/5 shadow-sm space-y-6">
-          <h3 className="text-base font-medium text-black pb-3 border-b border-black/5">
-            Loyalty Point Allocation Rules
-          </h3>
+          <div className="flex items-center justify-between pb-3 border-b border-black/5">
+            <h3 className="text-base font-medium text-black">
+              Loyalty Point Allocation Rules
+            </h3>
+            {loading && (
+              <span className="text-xs text-black/40 flex items-center gap-1.5">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Loading active campaign...</span>
+              </span>
+            )}
+          </div>
 
           <div className="space-y-5">
             {/* Setting 1: Points Per Scan */}
@@ -191,8 +251,8 @@ export const RewardsCampaignScreen: React.FC = () => {
               <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                 100% Genuine Verified
               </span>
-              <h4 className="text-base font-medium text-black mt-2">Cipla Asthalin Inhaler</h4>
-              <p className="text-[11px] text-black/50">Batch #DEL99 · Polygon Mainnet</p>
+              <h4 className="text-base font-medium text-black mt-2">Authentic Registered Product</h4>
+              <p className="text-[11px] text-black/50">Decentralized Cryptographic Proof</p>
             </div>
 
             {/* Live Reward Prompt inside Consumer Phone */}

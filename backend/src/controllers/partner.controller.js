@@ -734,14 +734,18 @@ const getPartnerReputation = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const query = { $or: [] };
-    if (mongoose.Types.ObjectId.isValid(id)) {
-      query.$or.push({ _id: id }, { user: id });
+    let partner;
+    if (id === 'me' || id === 'self') {
+      partner = await Partner.findOne({ user: req.user._id }).populate('user', 'name email phone walletAddress');
     } else {
-      query.$or.push({ businessName: new RegExp(id.trim(), 'i') }, { email: id.toLowerCase().trim() });
+      const query = { $or: [] };
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        query.$or.push({ _id: id }, { user: id });
+      } else {
+        query.$or.push({ businessName: new RegExp(id.trim(), 'i') }, { email: id.toLowerCase().trim() });
+      }
+      partner = await Partner.findOne(query).populate('user', 'name email phone walletAddress');
     }
-
-    const partner = await Partner.findOne(query).populate('user', 'name email phone walletAddress');
     if (!partner) {
       return errorResponse(res, `Partner "${id}" was not found.`, 404, 'PARTNER_NOT_FOUND');
     }

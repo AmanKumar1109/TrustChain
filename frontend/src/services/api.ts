@@ -656,6 +656,12 @@ class ApiService {
         body: JSON.stringify(body),
       });
     },
+
+    getSales: async () => {
+      const res = await this.request('/sales');
+      if (res.success) return res;
+      return this.request('/units/sales');
+    },
   };
 
   // ==========================================
@@ -690,6 +696,13 @@ class ApiService {
 
     getMyScans: async () => {
       return this.request('/consumer/scans');
+    },
+
+    exportWallet: async (otp: string = '123456') => {
+      return this.request('/consumer/export-wallet', {
+        method: 'POST',
+        body: JSON.stringify({ otp }),
+      });
     },
   };
 

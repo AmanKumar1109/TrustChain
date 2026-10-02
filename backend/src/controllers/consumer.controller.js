@@ -682,6 +682,55 @@ const getMyScans = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc Re-verify OTP and export non-custodial wallet private key for self-custody
+ * @route POST /api/v1/consumer/export-wallet
+ * @access Consumer, Admin
+ */
+const exportWallet = async (req, res, next) => {
+  try {
+    const { otp } = req.body;
+    if (!otp) {
+      return errorResponse(res, 'OTP is required to verify ownership before exporting wallet credentials.', 400, 'OTP_REQUIRED');
+    }
+
+    const isValid = smsService.verifyOtp(otp);
+    if (!isValid) {
+      return errorResponse(res, 'Invalid OTP code. Please use test OTP: 123456.', 400, 'INVALID_OTP');
+    }
+
+    const user = await User.findById(req.user._id).select('+encryptedPrivateKey');
+    if (!user) {
+      return errorResponse(res, 'User account not found.', 404, 'USER_NOT_FOUND');
+    }
+
+    let walletAddress = user.walletAddress;
+    let privateKey = null;
+
+    if (user.encryptedPrivateKey) {
+      const wallet = walletService.getWallet(user.encryptedPrivateKey);
+      walletAddress = wallet.address;
+      privateKey = wallet.privateKey;
+    } else {
+      const custodial = walletService.createCustodialWallet();
+      user.walletAddress = custodial.address;
+      user.encryptedPrivateKey = custodial.encryptedPrivateKey;
+      await user.save();
+      walletAddress = custodial.address;
+      privateKey = walletService.getWallet(custodial.encryptedPrivateKey).privateKey;
+    }
+
+    return successResponse(res, {
+      walletAddress,
+      privateKey,
+      network: 'Polygon PoS (Mainnet / Amoy)',
+      message: 'Wallet credentials successfully exported under verified session.',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getMyProducts,
   getProductDetail,
@@ -689,4 +738,5 @@ module.exports = {
   getResaleTransfers,
   respondResale,
   getMyScans,
+  exportWallet,
 };

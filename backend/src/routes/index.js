@@ -17,7 +17,7 @@ const analyticsRoutes = require('./analytics.routes');
 const billingRoutes = require('./billing.routes');
 const settingsRoutes = require('./settings.routes');
 
-const { sellUnit, claimUnit } = require('../controllers/unit.controller');
+const { sellUnit, claimUnit, getRetailSales } = require('../controllers/unit.controller');
 const { getHotspots } = require('../controllers/report.controller');
 const { getManufacturerAnalytics } = require('../controllers/analytics.controller');
 const { getRecallsList } = require('../controllers/batch.controller');
@@ -74,13 +74,20 @@ router.get(
   getRecallsList
 );
 
-// Direct top-level shortcuts: POST /api/v1/sell and POST /api/v1/claim
+// Direct top-level shortcuts: POST /api/v1/sell, GET /api/v1/sales, and POST /api/v1/claim
 router.post(
   '/sell',
   authenticate,
   requireRoles(ROLES.RETAILER, ROLES.ADMIN),
   validate(sellUnitSchema),
   sellUnit
+);
+
+router.get(
+  '/sales',
+  authenticate,
+  requireRoles(ROLES.RETAILER, ROLES.ADMIN),
+  getRetailSales
 );
 
 router.post(

@@ -6,6 +6,7 @@ const {
   getResaleTransfers,
   respondResale,
   getMyScans,
+  exportWallet,
 } = require('../controllers/consumer.controller');
 const authenticate = require('../middleware/auth');
 const { requireRoles } = require('../middleware/rbac');
@@ -59,5 +60,12 @@ router.post(
 
 // 6. Scan History of the Logged-in User
 router.get('/scans', getMyScans);
+
+// 7. Export non-custodial wallet credentials behind verified OTP
+router.post(
+  '/export-wallet',
+  requireRoles(ROLES.CONSUMER, ROLES.ADMIN),
+  exportWallet
+);
 
 module.exports = router;

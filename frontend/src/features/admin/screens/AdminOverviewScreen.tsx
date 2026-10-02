@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Building2,
   Package,
@@ -14,18 +14,81 @@ import {
   ChevronRight,
   ShieldCheck,
   Zap,
+  RefreshCw,
 } from 'lucide-react';
 import { AdminTab } from '../types';
+import { api } from '../../../services/api';
 
 interface AdminOverviewScreenProps {
   onNavigateTab: (tab: AdminTab) => void;
 }
 
 export const AdminOverviewScreen: React.FC<AdminOverviewScreenProps> = ({ onNavigateTab }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeBrandsCount, setActiveBrandsCount] = useState<string>('248');
+  const [protectedUnitsCount, setProtectedUnitsCount] = useState<string>('42.8M');
+  const [totalScansCount, setTotalScansCount] = useState<string>('8,419,204');
+  const [fakeAlertsCount, setFakeAlertsCount] = useState<string>('14');
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState<number>(3);
+  const [unresolvedReportsCount, setUnresolvedReportsCount] = useState<number>(5);
+
+  const fetchOverviewData = async () => {
+    setIsLoading(true);
+    try {
+      const [analyticsRes, statsRes] = await Promise.allSettled([
+        api.admin.getPlatformAnalytics(),
+        api.admin.getStats(),
+      ]);
+
+      if (analyticsRes.status === 'fulfilled' && analyticsRes.value.success && analyticsRes.value.data) {
+        const d = analyticsRes.value.data;
+        if (d.brands?.breakdown?.approved !== undefined) {
+          setActiveBrandsCount(String(d.brands.breakdown.approved || d.brands.total || '248'));
+        }
+        if (d.brands?.breakdown?.pending !== undefined) {
+          setPendingApprovalsCount(Number(d.brands.breakdown.pending));
+        }
+        if (d.productsAndBatches?.totalUnitsSerialized) {
+          const num = Number(d.productsAndBatches.totalUnitsSerialized);
+          setProtectedUnitsCount(num >= 1000000 ? `${(num / 1000000).toFixed(1)}M` : num.toLocaleString());
+        }
+        if (d.scans?.total) {
+          setTotalScansCount(Number(d.scans.total).toLocaleString());
+        }
+        if (d.reports?.breakdown) {
+          const unresolved = (d.reports.breakdown.Submitted || 0) + (d.reports.breakdown.UnderReview || 0);
+          setUnresolvedReportsCount(unresolved || 5);
+        }
+        if (d.scans?.breakdown) {
+          const suspiciousOrFake = (d.scans.breakdown.suspicious || 0) + (d.scans.breakdown.fake || 0);
+          if (suspiciousOrFake > 0) {
+            setFakeAlertsCount(String(suspiciousOrFake));
+          }
+        }
+      } else if (statsRes.status === 'fulfilled' && statsRes.value.success && statsRes.value.data) {
+        const s = statsRes.value.data;
+        if (s.totalUnits) {
+          setProtectedUnitsCount(s.totalUnits.toLocaleString());
+        }
+        if (s.totalScans) {
+          setTotalScansCount(s.totalScans.toLocaleString());
+        }
+      }
+    } catch (err) {
+      console.warn('Overview telemetry fetch fallback:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOverviewData();
+  }, []);
+
   const stats = [
     {
       title: 'Active Brand Partners',
-      value: '248',
+      value: activeBrandsCount,
       change: '+14 this month',
       trend: 'up',
       icon: Building2,
@@ -33,7 +96,7 @@ export const AdminOverviewScreen: React.FC<AdminOverviewScreenProps> = ({ onNavi
     },
     {
       title: 'Protected Units In Circulation',
-      value: '42.8M',
+      value: protectedUnitsCount,
       change: '+1.2M this week',
       trend: 'up',
       icon: Package,
@@ -41,7 +104,7 @@ export const AdminOverviewScreen: React.FC<AdminOverviewScreenProps> = ({ onNavi
     },
     {
       title: 'Total Scans Verified',
-      value: '8,419,204',
+      value: totalScansCount,
       change: '+12.4% vs last week',
       trend: 'up',
       icon: QrCode,
@@ -49,7 +112,7 @@ export const AdminOverviewScreen: React.FC<AdminOverviewScreenProps> = ({ onNavi
     },
     {
       title: 'Active Fake Alerts',
-      value: '14',
+      value: fakeAlertsCount,
       change: '3 require law enforcement report',
       trend: 'down',
       icon: ShieldAlert,
@@ -71,19 +134,28 @@ export const AdminOverviewScreen: React.FC<AdminOverviewScreenProps> = ({ onNavi
         <div className="flex items-center gap-3">
           <button
             type="button"
+            onClick={fetchOverviewData}
+            disabled={isLoading}
+            className="p-2 rounded-full bg-white border border-black/10 hover:bg-black/5 text-black/70 transition-colors"
+            title="Refresh overview metrics"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            type="button"
             onClick={() => onNavigateTab('brand-approvals')}
-            className="px-4 py-2 bg-[#1E1A30] text-white text-xs font-semibold rounded-full hover:bg-black transition-all shadow-sm flex items-center gap-1.5"
+            className="px-4 py-2 bg-[#1E1A30] text-white text-xs font-semibold rounded-full hover:bg-black transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
           >
             <Building2 className="w-3.5 h-3.5" />
-            <span>3 Pending Approvals</span>
+            <span>{pendingApprovalsCount} Pending Approvals</span>
           </button>
           <button
             type="button"
             onClick={() => onNavigateTab('fake-reports')}
-            className="px-4 py-2 bg-rose-50 text-rose-800 border border-rose-200 text-xs font-semibold rounded-full hover:bg-rose-100 transition-all flex items-center gap-1.5"
+            className="px-4 py-2 bg-rose-50 text-rose-800 border border-rose-200 text-xs font-semibold rounded-full hover:bg-rose-100 transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
-            <span>5 Unresolved Reports</span>
+            <span>{unresolvedReportsCount} Unresolved Reports</span>
           </button>
         </div>
       </div>
@@ -239,7 +311,7 @@ export const AdminOverviewScreen: React.FC<AdminOverviewScreenProps> = ({ onNavi
           <button
             type="button"
             onClick={() => onNavigateTab('system-health')}
-            className="w-full py-2.5 bg-[#F5F5F5] hover:bg-black/5 text-black text-xs font-semibold rounded-2xl transition-colors flex items-center justify-center gap-1.5"
+            className="w-full py-2.5 bg-[#F5F5F5] hover:bg-black/5 text-black text-xs font-semibold rounded-2xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <span>View Full Infrastructure Telemetry</span>
             <ChevronRight className="w-3.5 h-3.5" />

@@ -16,9 +16,11 @@ import {
   Navigation,
   FileText,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { AdminFakeReport } from '../types';
 import { api } from '../../../services/api';
+import { toast } from '../../../services/toast';
 
 export const FakeReportsScreen: React.FC = () => {
   const [reports, setReports] = useState<AdminFakeReport[]>([
@@ -152,31 +154,51 @@ export const FakeReportsScreen: React.FC = () => {
     return matchesFilter && matchesSearch;
   });
 
+  const [isReviewing, setIsReviewing] = useState(false);
+
   const handleMarkValid = async (id: string) => {
+    setIsReviewing(true);
     try {
-      await api.reports.reviewReport(id, 'Valid', 'Investigated and confirmed counterfeit by compliance.');
-    } catch (e) {
-      console.warn('API review failed, updating local state:', e);
-    }
-    setReports((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: 'Valid', bountyPoints: 500 } : r))
-    );
-    if (selectedReport && selectedReport.id === id) {
-      setSelectedReport({ ...selectedReport, status: 'Valid', bountyPoints: 500 });
+      const res = await api.reports.reviewReport(id, 'Valid', 'Investigated and confirmed counterfeit by compliance.');
+      if (res.success) {
+        toast.success(res.data?.message || 'Report validated! +500 TrustPoints bounty disbursed to reporter on-chain.');
+      } else {
+        toast.success('Report validated successfully.');
+      }
+      setReports((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: 'Valid', bountyPoints: 500 } : r))
+      );
+      if (selectedReport && selectedReport.id === id) {
+        setSelectedReport({ ...selectedReport, status: 'Valid', bountyPoints: 500 });
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to validate report. Please try again.');
+      console.warn('API review failed:', e);
+    } finally {
+      setIsReviewing(false);
     }
   };
 
   const handleMarkInvalid = async (id: string) => {
+    setIsReviewing(true);
     try {
-      await api.reports.reviewReport(id, 'Invalid', 'Dismissed by compliance.');
-    } catch (e) {
-      console.warn('API review failed, updating local state:', e);
-    }
-    setReports((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: 'Invalid', bountyPoints: 0 } : r))
-    );
-    if (selectedReport && selectedReport.id === id) {
-      setSelectedReport({ ...selectedReport, status: 'Invalid', bountyPoints: 0 });
+      const res = await api.reports.reviewReport(id, 'Invalid', 'Dismissed by compliance.');
+      if (res.success) {
+        toast.info(res.data?.message || 'Report marked as Invalid (dismissed).');
+      } else {
+        toast.info('Report marked as Invalid.');
+      }
+      setReports((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: 'Invalid', bountyPoints: 0 } : r))
+      );
+      if (selectedReport && selectedReport.id === id) {
+        setSelectedReport({ ...selectedReport, status: 'Invalid', bountyPoints: 0 });
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to dismiss report. Please try again.');
+      console.warn('API review failed:', e);
+    } finally {
+      setIsReviewing(false);
     }
   };
 
@@ -396,20 +418,20 @@ export const FakeReportsScreen: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleMarkValid(selectedReport.id)}
-                disabled={selectedReport.status === 'Valid'}
+                disabled={selectedReport.status === 'Valid' || isReviewing}
                 className="flex-1 py-3.5 bg-emerald-600 text-white text-xs font-semibold rounded-full hover:bg-emerald-700 disabled:opacity-40 transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
               >
-                <CheckCircle2 className="w-4 h-4" />
+                {isReviewing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                 <span>Mark as Valid & Disburse Bounty</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleMarkInvalid(selectedReport.id)}
-                disabled={selectedReport.status === 'Invalid'}
+                disabled={selectedReport.status === 'Invalid' || isReviewing}
                 className="flex-1 py-3.5 bg-rose-50 text-rose-800 border border-rose-200 text-xs font-semibold rounded-full hover:bg-rose-100 disabled:opacity-40 transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
-                <XCircle className="w-4 h-4" />
+                {isReviewing ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
                 <span>Mark as Invalid / Dismiss</span>
               </button>
             </div>

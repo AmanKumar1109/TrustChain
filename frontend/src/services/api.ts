@@ -1015,6 +1015,34 @@ class ApiService {
       return this.request(`/admin/brands${qs ? `?${qs}` : ''}`);
     },
 
+    getStats: async () => {
+      return this.request('/admin/stats');
+    },
+
+    getBrandById: async (brandId: string) => {
+      return this.request(`/admin/brands/${encodeURIComponent(brandId)}`);
+    },
+
+    approveBrand: async (brandId: string) => {
+      return this.request(`/admin/brands/${encodeURIComponent(brandId)}/approve`, {
+        method: 'POST',
+      });
+    },
+
+    rejectBrand: async (brandId: string, reason: string) => {
+      return this.request(`/admin/brands/${encodeURIComponent(brandId)}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      });
+    },
+
+    requestMoreInfo: async (brandId: string, details: string) => {
+      return this.request(`/admin/brands/${encodeURIComponent(brandId)}/request-info`, {
+        method: 'POST',
+        body: JSON.stringify({ details }),
+      });
+    },
+
     suspendBrand: async (brandId: string, reason: string) => {
       return this.request(`/admin/brands/${encodeURIComponent(brandId)}/suspend`, {
         method: 'PATCH',
@@ -1025,6 +1053,30 @@ class ApiService {
     activateBrand: async (brandId: string) => {
       return this.request(`/admin/brands/${encodeURIComponent(brandId)}/activate`, {
         method: 'PATCH',
+      });
+    },
+
+    getReports: async (params?: {
+      status?: string;
+      city?: string;
+      brand?: string;
+      page?: number;
+      limit?: number;
+      startDate?: string;
+      endDate?: string;
+    }) => {
+      const qs = new URLSearchParams(params as any).toString();
+      return this.request(`/admin/reports${qs ? `?${qs}` : ''}`);
+    },
+
+    getReportById: async (id: string) => {
+      return this.request(`/admin/reports/${encodeURIComponent(id)}`);
+    },
+
+    reviewReport: async (id: string, status: 'Submitted' | 'UnderReview' | 'Valid' | 'Invalid', notes?: string) => {
+      return this.request(`/admin/reports/${encodeURIComponent(id)}/review`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, notes }),
       });
     },
 

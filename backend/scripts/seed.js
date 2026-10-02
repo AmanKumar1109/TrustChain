@@ -341,6 +341,7 @@ async function seed() {
         soldDetails = {
           retailer: retailerUser._id,
           customer: consumer._id,
+          soldState: 1,
           soldAt: new Date(Date.now() - 3600000 * 5),
           claimToken: 'CLM-TEST-TOK-123',
           claimExpiresAt: new Date(Date.now() + 86400000 * 7),
@@ -350,6 +351,9 @@ async function seed() {
         soldDetails = {
           retailer: retailerUser._id,
           customer: consumer._id,
+          claimedBy: consumer._id,
+          currentOwnerWallet: consumerWallet.address,
+          soldState: 2,
           soldAt: new Date(Date.now() - 86400000 * 20),
           claimedAt: new Date(Date.now() - 86400000 * 19),
           claimToken: 'CLM-CLAIMED-TOK',
@@ -376,6 +380,43 @@ async function seed() {
       });
     }
     await Unit.insertMany(units1Docs);
+
+    // Seed Sales records for Consumer Vault & POS flow
+    const soldUnitDoc = await Unit.findOne({ unitCode: 'TC-SOLD-UNCLAIMED' });
+    const claimedUnitDoc = await Unit.findOne({ unitCode: 'TC-CLAIMED-UNIT' });
+    if (soldUnitDoc) {
+      await Sale.create({
+        unit: soldUnitDoc._id,
+        unitCode: soldUnitDoc.unitCode,
+        batch: batch1._id,
+        batchNumber: batch1.batchNumber,
+        product: asthalinProduct._id,
+        retailer: retailerUser._id,
+        customer: consumer._id,
+        customerPhone: consumer.phone,
+        salePrice: asthalinProduct.price,
+        claimToken: 'CLM-TEST-TOK-123',
+        isClaimed: false,
+        purchaseDate: new Date(Date.now() - 3600000 * 5),
+      });
+    }
+    if (claimedUnitDoc) {
+      await Sale.create({
+        unit: claimedUnitDoc._id,
+        unitCode: claimedUnitDoc.unitCode,
+        batch: batch1._id,
+        batchNumber: batch1.batchNumber,
+        product: asthalinProduct._id,
+        retailer: retailerUser._id,
+        customer: consumer._id,
+        customerPhone: consumer.phone,
+        salePrice: asthalinProduct.price,
+        claimToken: 'CLM-CLAIMED-TOK',
+        isClaimed: true,
+        claimedAt: new Date(Date.now() - 86400000 * 19),
+        purchaseDate: new Date(Date.now() - 86400000 * 20),
+      });
+    }
 
     // Batch 2: Montair Recalled Batch
     const batch2Codes = [

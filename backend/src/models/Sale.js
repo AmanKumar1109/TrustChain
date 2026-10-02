@@ -29,7 +29,12 @@ const saleSchema = new mongoose.Schema(
     },
     batchId: {
       type: String,
-      required: true,
+      trim: true,
+      index: true,
+      default: function () { return this.batchNumber || ''; },
+    },
+    batchNumber: {
+      type: String,
       trim: true,
       index: true,
     },
@@ -149,5 +154,32 @@ const saleSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Pre-validate hook to auto-populate defaults
+saleSchema.pre('validate', function (next) {
+  if (!this.saleId) {
+    const crypto = require('crypto');
+    this.saleId = 'SALE-' + Date.now().toString(36).toUpperCase() + '-' + crypto.randomBytes(2).toString('hex').toUpperCase();
+  }
+  if (!this.batchId && this.batchNumber) {
+    this.batchId = this.batchNumber;
+  }
+  if (!this.retailerWallet) {
+    this.retailerWallet = '0x0000000000000000000000000000000000000000';
+  }
+  if (!this.customerWallet) {
+    this.customerWallet = '0x0000000000000000000000000000000000000000';
+  }
+  if (!this.claimLink) {
+    this.claimLink = `http://localhost:5173/#consumer`;
+  }
+  if (!this.warranty) {
+    this.warranty = {};
+  }
+  if (!this.warranty.expiryDate) {
+    this.warranty.expiryDate = new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000);
+  }
+  next();
+});
 
 module.exports = mongoose.model('Sale', saleSchema);

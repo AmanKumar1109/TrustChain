@@ -29,7 +29,11 @@ const getMyProducts = async (req, res, next) => {
 
     // 1. Fetch Claimed Products (where current owner is user or claimed by user)
     const claimedUnits = await Unit.find({
-      $or: [{ claimedBy: userId }, { currentOwnerWallet: userWallet, soldState: 2 }],
+      $or: [
+        { claimedBy: userId },
+        { customer: userId, status: 'claimed' },
+        { currentOwnerWallet: userWallet, soldState: 2 },
+      ],
     })
       .populate('product')
       .populate('retailer', 'name companyName')

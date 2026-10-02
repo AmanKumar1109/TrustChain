@@ -63,6 +63,40 @@ npm run dev
 ```
 *Open `http://localhost:5173` in your browser.*
 
+### Step 7: Run Automated Verification & Test Suites (Zero-Config)
+```bash
+# 1. Run all 72 Smart Contract Unit Tests (Roles, Merkle Proofs, Custody, Resale, Rewards):
+cd contracts-project
+npm test
+
+# 2. Run the Full 14-Step Golden Path Automated Demo Flow:
+cd backend
+npm run test:demo
+```
+
+---
+
+## 🎬 Full Interactive Demo Flow (Click-by-Click)
+
+Follow this 14-stage journey through the live application:
+
+| Step # | Stage | Persona & Screen | Action & What to Observe |
+|---|---|---|---|
+| **1** | **Brand Approval** | **Super Admin** (`#admin`) | Open **Brand Approvals** tab. Inspect Cadila / Zydus legal documents (GST, CIN, Drug License). Click **Approve Manufacturer** — on-chain authorization transaction is dispatched. |
+| **2** | **Batch & QR Minting** | **Brand Manufacturer** (`#dashboard`) | Go to **Batches** -> **Create Batch**. Select product, enter 100 units, pick *Standard* protection. Click **Confirm & Register Batch**. Download the generated QR codes as **ZIP** or printable **PDF**. |
+| **3** | **Factory Dispatch** | **Manufacturer** (`#dashboard`) | Go to **Supply Chain** -> **New Custody Transfer**. Select batch, set quantity to 50 units, target carrier: **Apex Logistics** (Distributor). |
+| **4** | **Custody Acceptance & Forwarding** | **Distributor** (`#partner`) | Log in as `distributor@apexlogistics.com`. View **Incoming Shipments**, click **Accept Shipment**. Next, go to **Transfer Stock** and dispatch 25 units to **Metro Life Chemist** (Retailer). |
+| **5** | **Point of Sale (POS)** | **Retailer** (`#partner`) | Log in as `retailer@metrolife.com`. Go to **Scan & Sell**. Camera/manual scan unit QR code, enter customer phone `+91 98765 43210`. Click **Complete Sale**. An SMS invite link with claim token & OTP `123456` is generated. |
+| **6** | **SMS Claim & Warranty** | **Consumer** (`#consumer`) | Open the SMS claim link (or enter OTP `123456` in **Claim Product** modal). Digital Certificate of Authenticity is activated in the **Vault** and **+50 TrustPoints** are awarded. |
+| **7** | **Public Genuine Scan** | **Guest / Consumer** (`/verify/TC-8924-GENUINE`) | Point camera or type code into public verification bar. Status shows **Genuine** (Green badge) with complete 4-stage custody timeline (Factory -> Distributor -> Pharmacy -> Owner). |
+| **8** | **Clone Velocity Anomaly** | **Public Scanner** (`/verify/TC-CLONE-DELHI`) | Simulates the exact same code scanned from another city (e.g., Delhi vs. Bengaluru) within 2 minutes. Status flips to **Suspicious** (Yellow badge): *"Scanned in 2 different cities within 5 minutes"*. |
+| **9** | **Counterfeit Photo Report** | **Consumer** (`#consumer`) | Click **Report Counterfeit**. Attach packaging photo, select retailer shop, and submit incident. Report enters admin audit queue with status *Submitted*. |
+| **10** | **Admin Adjudication** | **Super Admin** (`#admin`) | Go to **Fake Reports**. Inspect evidence photo, shop address, and GPS coordinates. Click **Mark as Valid & Disburse Bounty**. |
+| **11** | **Bounty Credit** | **Consumer** (`#consumer`) | Consumer's rewards ledger receives **+500 TrustPoints** bounty reward with notification. Points can be redeemed for brand vouchers in the **Rewards Store**. |
+| **12** | **Hotspot Heatmap Update** | **Manufacturer** (`#dashboard`) | Go to **Analytics** -> **Hotspot Map**. Delhi risk rating updates dynamically to reflect the validated counterfeit alert. |
+| **13** | **Recalled Batch Unit** | **Public Scanner** (`/verify/TC-RECALL-99`) | Verifying a recalled unit displays **Recalled** (Orange warning banner) with safety advisory notice: *"DO NOT CONSUME OR SELL. Contact brand customer support"*. |
+| **14** | **Unknown Counterfeit Code** | **Public Scanner** (`/verify/RANDOM-INVALID-XYZ`) | Verifying an unindexed code displays **Not Found / Counterfeit** (Red warning banner) prompting consumer to file a bounty report. |
+
 ---
 
 ### 🔑 Demo Credentials:
@@ -74,9 +108,9 @@ npm run dev
 
 ---
 
-## ⚡ 2. Frontend Web App Kaise Chalayein
+## ⚡ 2. Frontend Web App Details
 
-Frontend React + Vite + Tailwind CSS par bana hai.
+Frontend is powered by React 19 + Vite + Tailwind CSS with modern glassmorphism aesthetics.
 
 ```bash
 cd frontend
@@ -84,15 +118,15 @@ npm install
 npm run dev
 ```
 
-Browser mein `http://localhost:5173` kholein.
+Open `http://localhost:5173` in your browser.
 
-### Frontend Pages & Dashboards:
+### Key Routes & Portals:
 - **Landing Page**: `http://localhost:5173/`
-- **Product Verification**: `http://localhost:5173/#verify` (ya test code verify karein)
-- **Manufacturer Dashboard**: `http://localhost:5173/#dashboard` (batch registration, QR download, inventory & counterfeit hotspots)
-- **Supply Chain Partner Dashboard**: `http://localhost:5173/#partner` (stock transfers & custody)
-- **Consumer App**: `http://localhost:5173/#consumer` (product claim, resale & rewards)
-- **Admin Dashboard**: `http://localhost:5173/#admin` (platform role management, brand approvals & fake report reviews)
+- **Product Verification**: `http://localhost:5173/#verify`
+- **Manufacturer Dashboard**: `http://localhost:5173/#dashboard` (Batch creation, Merkle roots, QR download as PDF/ZIP, supply chain transfers, partners, recalls, billing & hotspots)
+- **Supply Chain Partner Dashboard**: `http://localhost:5173/#partner` (Incoming custody, accept/reject, inventory, transfer & POS retail sale)
+- **Consumer App**: `http://localhost:5173/#consumer` (Digital vault, warranty certificates, P2P resale, rewards ledger, store coupon unlocking, fake reporting, and self-custodial wallet export)
+- **Admin Dashboard**: `http://localhost:5173/#admin` (Mission control, brand KYC/KYB approvals, fake reports review with bounties, users/brands directory, reward partners, and system health relayer queue)
 
 ### 🔍 Live Test Codes:
 - **Genuine Product**: `http://localhost:5173/verify/TC-8924-GENUINE`
@@ -100,6 +134,7 @@ Browser mein `http://localhost:5173` kholein.
 - **Sold & Awaiting Claim**: `http://localhost:5173/verify/TC-SOLD-UNCLAIMED`
 - **Claimed Unit & Active Warranty**: `http://localhost:5173/verify/TC-CLAIMED-UNIT`
 - **Recalled Batch Unit**: `http://localhost:5173/verify/TC-RECALL-99`
+- **Unknown Fake Code**: `http://localhost:5173/verify/RANDOM-INVALID-XYZ`
 
 ---
 

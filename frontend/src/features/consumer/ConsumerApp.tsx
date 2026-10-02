@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ConsumerTab,
   ClaimedProduct,
@@ -33,6 +33,8 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { LogoIcon } from '../../components/common/LogoIcon';
+import { api } from '../../services/api';
+import { toast } from '../../services/toast';
 
 interface ConsumerAppProps {
   onNavigateHome?: () => void;
@@ -50,16 +52,19 @@ export const ConsumerApp: React.FC<ConsumerAppProps> = ({
   // Modals
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
+  const [claimToken, setClaimToken] = useState('');
+  const [claimUnitCode, setClaimUnitCode] = useState('TC-8924-GENUINE');
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [transferTargetProduct, setTransferTargetProduct] = useState<ClaimedProduct | null>(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<RewardOffer | null>(null);
 
   // User State
+  const session = api.auth.getSession();
   const [pointsBalance, setPointsBalance] = useState(1420);
   const [streakCount, setStreakCount] = useState(5);
-  const userPhone = '+91 98765 43210';
-  const referralCode = 'TRUST-VIP-994';
+  const [userPhone, setUserPhone] = useState(session?.phone || '+91 98765 43210');
+  const [referralCode, setReferralCode] = useState('TRUST-VIP-994');
 
   // Mock Products Data
   const [products, setProducts] = useState<ClaimedProduct[]>([
@@ -137,7 +142,7 @@ export const ConsumerApp: React.FC<ConsumerAppProps> = ({
   ]);
 
   // Mock Rewards Offers
-  const [offers] = useState<RewardOffer[]>([
+  const [offers, setOffers] = useState<RewardOffer[]>([
     {
       id: 'off-1',
       brandName: 'Tata 1mg',
@@ -253,6 +258,166 @@ export const ConsumerApp: React.FC<ConsumerAppProps> = ({
     },
   ]);
 
+  const fetchAllData = async () => {
+    try {
+      const [
+        balanceRes,
+        streakRes,
+        referralRes,
+        productsRes,
+        offersRes,
+        reportsRes,
+        scansRes,
+      ] = await Promise.allSettled([
+        api.rewards.getBalance(),
+        api.rewards.getStreak(),
+        api.rewards.getReferral(),
+        api.consumer.getMyProducts(),
+        api.rewards.getStoreOffers(),
+        api.reports.getMyReports(),
+        api.consumer.getMyScans(),
+      ]);
+
+      // 1. Points Balance
+      if (balanceRes.status === 'fulfilled' && balanceRes.value.success && balanceRes.value.data) {
+        if (typeof balanceRes.value.data.pointsBalance === 'number') {
+          setPointsBalance(balanceRes.value.data.pointsBalance);
+        }
+      }
+
+      // 2. Streak
+      if (streakRes.status === 'fulfilled' && streakRes.value.success && streakRes.value.data?.streak) {
+        if (typeof streakRes.value.data.streak.currentStreak === 'number') {
+          setStreakCount(streakRes.value.data.streak.currentStreak || 5);
+        }
+      }
+
+      // 3. Referral
+      if (referralRes.status === 'fulfilled' && referralRes.value.success && referralRes.value.data?.referralCode) {
+        setReferralCode(referralRes.value.data.referralCode);
+      }
+
+      // 4. Products
+      if (productsRes.status === 'fulfilled' && productsRes.value.success && productsRes.value.data?.products) {
+        const list = productsRes.value.data.products;
+        if (Array.isArray(list) && list.length > 0) {
+          const mapped: ClaimedProduct[] = list.map((p: any, idx: number) => {
+            const dateStr = p.purchaseDate
+              ? new Date(p.purchaseDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+              : 'Recent';
+
+            const expiryStr = p.warranty?.expiryDate
+              ? new Date(p.warranty.expiryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+              : '12 Months Coverage';
+
+            return {
+              id: p.unitCode || p._id || `prod-${idx}`,
+              name: p.productName || 'Verified Product',
+              brand: p.category || 'Genuine Brand',
+              batchNumber: p.batchNumber || 'BATCH-2026',
+              serialNumber: p.unitCode || 'CIP-AST-88219-IND',
+              category: p.category || 'General',
+              image: (p.images && p.images[0]) || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80',
+              status: p.status === 'Claimed' ? 'Claimed' : 'Pending Claim',
+              claimedDate: p.claimedAt
+                ? new Date(p.claimedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                : p.status === 'Claimed' ? 'Active' : 'Awaiting Claim',
+              warrantyValidUntil: expiryStr,
+              purchaseProof: {
+                retailerName: p.retailerName || 'Authorized Pharmacy / Store',
+                invoiceNumber: `INV-2026-AP-${p.unitCode ? p.unitCode.slice(-4) : '9921'}`,
+                purchaseDate: dateStr,
+                amountPaid: 'MRP',
+              },
+              ownershipHistory: [
+                { role: 'Manufacturer', name: 'Authorized Production Facility', location: 'Goa, India', date: 'Mfr Date' },
+                { role: 'Retailer', name: p.retailerName || 'Authorized Store', location: 'Local Distribution', date: dateStr },
+                { role: 'Owner', name: `Consumer (${session?.phone || userPhone})`, location: 'India', date: 'Active' },
+              ],
+            };
+          });
+          setProducts(mapped);
+        }
+      }
+
+      // 5. Offers
+      if (offersRes.status === 'fulfilled' && offersRes.value.success && offersRes.value.data?.offers) {
+        const list = offersRes.value.data.offers;
+        if (Array.isArray(list) && list.length > 0) {
+          const mappedOffers: RewardOffer[] = list.map((o: any) => ({
+            id: o.offerId || o._id,
+            brandName: o.brandName || 'Brand Partner',
+            brandLogo: o.brandLogo || o.brandName?.slice(0, 4)?.toUpperCase() || 'BRAND',
+            title: o.title || 'Exclusive Discount Voucher',
+            discountText: o.discountText || 'Save with TrustPoints',
+            pointsCost: o.pointsRequired || o.pointsCost || 200,
+            expiryDate: o.expiryDate || '31 Dec 2026',
+            category: o.category || 'General',
+            couponCode: o.couponCode || 'TRUST-SAVE25',
+            terms: o.terms || 'Valid on authenticated partner stores across India.',
+          }));
+          setOffers(mappedOffers);
+        }
+      }
+
+      // 6. Reports
+      if (reportsRes.status === 'fulfilled' && reportsRes.value.success && reportsRes.value.data?.reports) {
+        const list = reportsRes.value.data.reports;
+        if (Array.isArray(list) && list.length > 0) {
+          const mappedReports: UserReport[] = list.map((r: any) => ({
+            id: r._id || r.reportId,
+            reportId: r.reportId || `REP-${Math.floor(10000 + Math.random() * 90000)}`,
+            productName: r.product?.name || r.productName || `Item @ ${r.shopName}`,
+            shopName: r.shopName || 'Retailer',
+            location: r.geo ? `${r.geo.address || ''} ${r.geo.city || ''}`.trim() : 'Location',
+            reportedDate: r.createdAt
+              ? new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+              : 'Recent',
+            status: r.status === 'Valid' ? 'Valid' : r.status === 'Invalid' ? 'Invalid' : r.status === 'UnderReview' ? 'Under review' : 'Submitted',
+            comment: r.comment || '',
+            bonusPointsEarned: r.bonusPointsEarned || (r.status === 'Valid' ? 500 : undefined),
+          }));
+          setReports(mappedReports);
+        }
+      }
+
+      // 7. Scans History
+      if (scansRes.status === 'fulfilled' && scansRes.value.success && scansRes.value.data?.scans) {
+        const list = scansRes.value.data.scans;
+        if (Array.isArray(list) && list.length > 0) {
+          const mappedScans: ScanHistoryRecord[] = list.map((s: any) => ({
+            id: s.id || s._id,
+            code: s.code || 'CODE',
+            productName: s.productName || 'Verified Product',
+            brand: s.brandName || 'Authentic Brand',
+            timestamp: s.timestamp
+              ? new Date(s.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ', ' + new Date(s.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+              : 'Recent',
+            resultState: s.result === 'Genuine' ? 'Genuine' : s.result === 'Suspicious' ? 'Suspicious' : s.result === 'Fake' ? 'Fake' : 'Recalled',
+            pointsAwarded: s.result === 'Genuine' ? 50 : s.result === 'Fake' ? 100 : 10,
+          }));
+          setHistoryRecords(mappedScans);
+        }
+      }
+    } catch (err) {
+      console.warn('Error loading consumer initial data:', err);
+    }
+  };
+
+  useEffect(() => {
+    // 1. Detect SMS Claim Link Query Params
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('claimToken') || urlParams.get('token') || urlParams.get('claim');
+    const urlCode = urlParams.get('code') || urlParams.get('unitCode');
+    if (urlToken || urlCode) {
+      if (urlToken) setClaimToken(urlToken);
+      if (urlCode) setClaimUnitCode(urlCode);
+      setIsClaimModalOpen(true);
+    }
+
+    fetchAllData();
+  }, []);
+
   // Handlers
   const handleScanSuccess = (code: string) => {
     setIsScannerOpen(false);
@@ -263,27 +428,7 @@ export const ConsumerApp: React.FC<ConsumerAppProps> = ({
 
   const handleClaimSuccess = () => {
     setIsClaimModalOpen(false);
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.id === 'prod-3'
-          ? {
-              ...p,
-              status: 'Claimed',
-              claimedDate: 'Just now',
-              ownershipHistory: [
-                ...p.ownershipHistory,
-                {
-                  role: 'Owner',
-                  name: `Consumer (${userPhone})`,
-                  location: 'Bengaluru, KA',
-                  date: 'Today',
-                },
-              ],
-            }
-          : p
-      )
-    );
-    setPointsBalance((prev) => prev + 100);
+    fetchAllData();
   };
 
   const handleTransferInitiate = (product: ClaimedProduct) => {
@@ -297,27 +442,17 @@ export const ConsumerApp: React.FC<ConsumerAppProps> = ({
       setProducts((prev) => prev.filter((p) => p.id !== transferTargetProduct.id));
     }
     setTransferTargetProduct(null);
+    fetchAllData();
   };
 
   const handleReportSubmit = (newReport: any) => {
     setIsReportModalOpen(false);
-    setReports((prev) => [
-      {
-        id: `rep-${Date.now()}`,
-        reportId: newReport.reportId,
-        productName: newReport.shopName ? `Reported Item @ ${newReport.shopName}` : 'Reported Counterfeit Item',
-        shopName: newReport.shopName || 'Physical Retailer',
-        location: newReport.location || 'Detected Geo-location',
-        reportedDate: 'Just now',
-        status: 'Submitted',
-        comment: newReport.comment,
-      },
-      ...prev,
-    ]);
+    fetchAllData();
   };
 
   const handleRedeemPoints = (cost: number) => {
     setPointsBalance((prev) => Math.max(0, prev - cost));
+    fetchAllData();
   };
 
   const navItems: { key: ConsumerTab; label: string }[] = [
@@ -534,6 +669,8 @@ export const ConsumerApp: React.FC<ConsumerAppProps> = ({
         isOpen={isClaimModalOpen}
         onClose={() => setIsClaimModalOpen(false)}
         onClaimSuccess={handleClaimSuccess}
+        claimToken={claimToken}
+        unitCode={claimUnitCode}
       />
 
       <TransferUserModal

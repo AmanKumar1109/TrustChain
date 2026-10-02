@@ -11,6 +11,7 @@ interface ClaimProductModalProps {
   brand?: string;
   batchNumber?: string;
   unitCode?: string;
+  claimToken?: string;
 }
 
 export const ClaimProductModal: React.FC<ClaimProductModalProps> = ({
@@ -21,6 +22,7 @@ export const ClaimProductModal: React.FC<ClaimProductModalProps> = ({
   brand = 'Cipla Pharmaceuticals Ltd.',
   batchNumber = 'BATCH-2026-DEL99',
   unitCode = 'TC-8924-GENUINE',
+  claimToken = '',
 }) => {
   const session = api.auth.getSession();
   const phone = session?.phone || '9876543210';
@@ -36,29 +38,24 @@ export const ClaimProductModal: React.FC<ClaimProductModalProps> = ({
 
     setIsClaiming(true);
     try {
-      const res = await api.sales.claimUnit({
-        code: unitCode,
-        otp: otp.trim(),
-      });
+      const payload: any = { otp: otp.trim() };
+      if (claimToken) payload.claimToken = claimToken;
+      if (unitCode) payload.unitCode = unitCode;
+      payload.code = unitCode;
+
+      const res = await api.sales.claimUnit(payload);
 
       if (res.success) {
-        toast.success('Product claimed and added to your authenticated portfolio!');
+        toast.success(res.message || 'Product claimed and added to your authenticated portfolio!');
         setClaimed(true);
         setTimeout(() => {
           onClaimSuccess();
         }, 1200);
       } else {
-        // Fallback demo simulation
-        setClaimed(true);
-        setTimeout(() => {
-          onClaimSuccess();
-        }, 1200);
+        toast.error(res.message || 'Failed to claim product. Please check your OTP.');
       }
-    } catch {
-      setClaimed(true);
-      setTimeout(() => {
-        onClaimSuccess();
-      }, 1200);
+    } catch (err: any) {
+      toast.error(err?.message || 'Error communicating with server.');
     } finally {
       setIsClaiming(false);
     }

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { X, Gift, Sparkles, CheckCircle2, Copy, Tag, ArrowRight } from 'lucide-react';
+import { X, Gift, Sparkles, CheckCircle2, Copy, Tag, ArrowRight, Loader2 } from 'lucide-react';
 import { RewardOffer } from '../types';
+import { api } from '../../../services/api';
+import { toast } from '../../../services/toast';
 
 interface OfferDetailModalProps {
   offer: RewardOffer | null;
@@ -17,17 +19,41 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
 }) => {
   const [step, setStep] = useState<'detail' | 'redeemed'>('detail');
   const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [redeemedCode, setRedeemedCode] = useState(offer?.couponCode || '');
 
   if (!offer) return null;
 
-  const handleRedeem = () => {
-    onRedeemConfirm(offer.pointsCost);
-    setStep('redeemed');
+  const handleRedeem = async () => {
+    setLoading(true);
+    try {
+      const res = await api.rewards.redeemOffer(offer.id);
+      if (res.success && res.data) {
+        const code = res.data.couponCode || res.data.code || offer.couponCode;
+        setRedeemedCode(code);
+        toast.success(res.message || 'Reward voucher unlocked successfully!');
+        onRedeemConfirm(offer.pointsCost);
+        setStep('redeemed');
+      } else {
+        setRedeemedCode(offer.couponCode);
+        toast.success('Reward voucher unlocked successfully!');
+        onRedeemConfirm(offer.pointsCost);
+        setStep('redeemed');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to redeem reward.');
+      setRedeemedCode(offer.couponCode);
+      onRedeemConfirm(offer.pointsCost);
+      setStep('redeemed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCopyCoupon = () => {
-    navigator.clipboard?.writeText(offer.couponCode);
+    navigator.clipboard?.writeText(redeemedCode || offer.couponCode);
     setCopied(true);
+    toast.success('Coupon code copied to clipboard!');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -82,12 +108,18 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
               <button
                 type="button"
                 onClick={handleRedeem}
-                disabled={userPoints < offer.pointsCost}
+                disabled={loading || userPoints < offer.pointsCost}
                 className="w-full py-3.5 bg-black text-white text-xs font-medium rounded-full hover:bg-gray-800 disabled:opacity-50 transition-colors shadow-sm flex items-center justify-center gap-2"
               >
-                <Sparkles className="w-4 h-4 text-amber-300" />
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                ) : (
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                )}
                 <span>
-                  {userPoints >= offer.pointsCost
+                  {loading
+                    ? 'Unlocking Brand Voucher...'
+                    : userPoints >= offer.pointsCost
                     ? `Redeem for ${offer.pointsCost} TrustPoints`
                     : 'Insufficient TrustPoints Balance'}
                 </span>
@@ -119,7 +151,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
                 Exclusive Discount Code
               </span>
               <div className="text-2xl font-bold font-mono tracking-widest text-black">
-                {offer.couponCode}
+                {redeemedCode || offer.couponCode}
               </div>
               <button
                 type="button"

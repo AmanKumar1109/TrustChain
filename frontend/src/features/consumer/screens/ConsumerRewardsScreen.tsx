@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Flame,
   Gift,
@@ -11,7 +11,10 @@ import {
   ShieldCheck,
   Award,
   ChevronRight,
+  Loader2,
 } from 'lucide-react';
+import { api } from '../../../services/api';
+import { toast } from '../../../services/toast';
 
 interface ConsumerRewardsScreenProps {
   pointsBalance: number;
@@ -79,6 +82,58 @@ export const ConsumerRewardsScreen: React.FC<ConsumerRewardsScreenProps> = ({
   onOpenRewardsStore,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [historyList, setHistoryList] = useState<PointsHistoryItem[]>(INITIAL_HISTORY);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadRewardsHistory() {
+      try {
+        const res = await api.rewards.getHistory(1, 20);
+        if (res.success && res.data?.history && Array.isArray(res.data.history) && res.data.history.length > 0) {
+          const items: PointsHistoryItem[] = res.data.history.map((h: any) => {
+            const dateObj = new Date(h.createdAt || Date.now());
+            const formattedDate =
+              dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) +
+              ', ' +
+              dateObj.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+            const isPositive = (h.amount || 0) >= 0;
+            return {
+              id: h._id || `tx-${Math.random()}`,
+              title:
+                h.type === 'SCAN_REWARD'
+                  ? 'Verified Genuine Scan'
+                  : h.type === 'STREAK_BONUS'
+                  ? 'Daily Streak Bonus'
+                  : h.type === 'REDEMPTION'
+                  ? 'Voucher Redemption'
+                  : h.type === 'FAKE_REPORT_BOUNTY'
+                  ? 'Fake Product Report Bounty'
+                  : 'Loyalty Reward Points',
+              source: h.description || 'Loyalty Activity',
+              points: h.amount || 0,
+              date: formattedDate,
+              type: isPositive ? 'earn' : 'redeem',
+            };
+          });
+
+          if (isMounted) setHistoryList(items);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch rewards history, using fallback:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadRewardsHistory();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleCopyReferral = () => {
     navigator.clipboard.writeText(referralCode);
@@ -232,26 +287,37 @@ export const ConsumerRewardsScreen: React.FC<ConsumerRewardsScreenProps> = ({
             </div>
 
             <div className="space-y-3">
-              {INITIAL_HISTORY.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between py-2.5 border-b border-black/[0.04] last:border-0"
-                >
-                  <div className="pr-2">
-                    <h4 className="text-xs font-semibold text-black">{item.title}</h4>
-                    <span className="text-[11px] text-black/50 block truncate max-w-[200px]">{item.source}</span>
-                    <span className="text-[10px] text-black/40">{item.date}</span>
-                  </div>
-
-                  <span
-                    className={`text-xs font-bold shrink-0 ${
-                      item.type === 'earn' ? 'text-emerald-600' : 'text-rose-600'
-                    }`}
-                  >
-                    {item.type === 'earn' ? `+${item.points}` : item.points} Pts
-                  </span>
+              {loading ? (
+                <div className="p-8 text-center text-black/40 text-xs flex flex-col items-center justify-center gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin text-black/30" />
+                  <span>Loading activity ledger...</span>
                 </div>
-              ))}
+              ) : historyList.length === 0 ? (
+                <div className="p-8 text-center text-black/40 text-xs">
+                  No points activity recorded yet.
+                </div>
+              ) : (
+                historyList.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between py-2.5 border-b border-black/[0.04] last:border-0"
+                  >
+                    <div className="pr-2">
+                      <h4 className="text-xs font-semibold text-black">{item.title}</h4>
+                      <span className="text-[11px] text-black/50 block truncate max-w-[200px]">{item.source}</span>
+                      <span className="text-[10px] text-black/40">{item.date}</span>
+                    </div>
+
+                    <span
+                      className={`text-xs font-bold shrink-0 ${
+                        item.type === 'earn' ? 'text-emerald-600' : 'text-rose-600'
+                      }`}
+                    >
+                      {item.type === 'earn' ? `+${item.points}` : item.points} Pts
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

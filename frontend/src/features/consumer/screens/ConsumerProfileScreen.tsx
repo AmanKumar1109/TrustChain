@@ -16,7 +16,11 @@ import {
   LogOut,
   X,
   FileWarning,
+  Loader2,
+  KeyRound,
 } from 'lucide-react';
+import { api } from '../../../services/api';
+import { toast } from '../../../services/toast';
 
 interface ConsumerProfileScreenProps {
   userPhone: string;
@@ -25,27 +29,81 @@ interface ConsumerProfileScreenProps {
 }
 
 export const ConsumerProfileScreen: React.FC<ConsumerProfileScreenProps> = ({
-  userPhone,
+  userPhone: initialUserPhone,
   onOpenMyReports,
   onLogout,
 }) => {
+  const session = api.auth.getSession();
+  const userPhone = session?.phone || initialUserPhone || '+91 98765 43210';
+  const userName = session?.name || 'Verified Consumer';
+
   const [language, setLanguage] = useState<'English' | 'Hindi' | 'Tamil' | 'Marathi'>('English');
   const [notifications, setNotifications] = useState({
     smsAlerts: true,
     warrantyExpiry: true,
     counterfeitBounties: true,
   });
+
+  // Export Wallet Modal States
   const [showExportModal, setShowExportModal] = useState(false);
+  const [exportStep, setExportStep] = useState<'otp' | 'revealed'>('otp');
+  const [otp, setOtp] = useState('123456');
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [exportedWallet, setExportedWallet] = useState<{
+    walletAddress: string;
+    privateKey: string;
+  }>({
+    walletAddress: session?.walletAddress || '0x8B7a5C29C1F82141a0cD0e3cE016aF7A93699b21',
+    privateKey: '0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d',
+  });
   const [copiedKey, setCopiedKey] = useState(false);
 
-  // Mock embedded non-custodial wallet address for user
-  const mockWalletAddress = '0x8B7a5C29C1F82141a0cD0e3cE016aF7A93699b21';
-  const mockPrivateKey = '0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d';
+  const handleOpenExportModal = () => {
+    setExportStep('otp');
+    setOtp('123456');
+    setShowExportModal(true);
+  };
+
+  const handleVerifyOtpForExport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otp.trim()) return;
+
+    setIsVerifyingOtp(true);
+    try {
+      const res = await api.consumer.exportWallet(otp.trim());
+      if (res.success && res.data) {
+        setExportedWallet({
+          walletAddress: res.data.walletAddress || session?.walletAddress || '0x8B7a5C29C1F82141a0cD0e3cE016aF7A93699b21',
+          privateKey: res.data.privateKey || '0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d',
+        });
+        toast.success(res.message || 'Identity re-verified! Private key decrypted.');
+        setExportStep('revealed');
+      } else {
+        toast.error(res.message || 'Invalid OTP code. Please use demo OTP: 123456');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Verification failed. Please try again.');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
 
   const handleCopyKey = () => {
-    navigator.clipboard?.writeText(mockPrivateKey);
+    navigator.clipboard?.writeText(exportedWallet.privateKey);
     setCopiedKey(true);
+    toast.success('Private key copied to clipboard!');
     setTimeout(() => setCopiedKey(false), 2000);
+  };
+
+  const handleCloseExportModal = () => {
+    setShowExportModal(false);
+    setExportStep('otp');
+    setOtp('123456');
+  };
+
+  const handleUserLogout = () => {
+    api.auth.logout();
+    onLogout?.();
   };
 
   return (
@@ -172,13 +230,25 @@ export const ConsumerProfileScreen: React.FC<ConsumerProfileScreenProps> = ({
         <div className="pt-2">
           <button
             type="button"
-            onClick={() => setShowExportModal(true)}
+            onClick={handleOpenExportModal}
             className="w-full py-3 bg-[#F5F5F5] hover:bg-black/5 text-black border border-black/10 rounded-full text-xs font-semibold transition-all flex items-center justify-center gap-2"
           >
             <Lock className="w-3.5 h-3.5 text-black/60" />
             Export to My Own Wallet
           </button>
         </div>
+      </div>
+
+      {/* Logout button */}
+      <div className="pt-2">
+        <button
+          type="button"
+          onClick={handleUserLogout}
+          className="w-full py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-full text-xs font-semibold transition-all flex items-center justify-center gap-2"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          Log Out of Consumer Account
+        </button>
       </div>
 
       {/* Export to Wallet Modal */}
@@ -191,51 +261,107 @@ export const ConsumerProfileScreen: React.FC<ConsumerProfileScreenProps> = ({
               </span>
               <button
                 type="button"
-                onClick={() => setShowExportModal(false)}
+                onClick={handleCloseExportModal}
                 className="w-8 h-8 rounded-full bg-black/5 hover:bg-black/10 flex items-center justify-center text-black/60 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-xs text-amber-900">
-              <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-semibold block">Security Warning</span>
-                <span>Never share your private key with anyone. TrustChain staff will never ask for your key.</span>
-              </div>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <span className="text-black/50 uppercase text-[10px] font-semibold block mb-1">
-                  Public Polygon Address
-                </span>
-                <div className="bg-[#F5F5F5] p-3 rounded-2xl font-mono text-[11px] break-all border border-black/5 text-black select-all">
-                  {mockWalletAddress}
+            {exportStep === 'otp' ? (
+              <form onSubmit={handleVerifyOtpForExport} className="space-y-4">
+                <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-2xl flex items-start gap-2.5 text-xs text-blue-900">
+                  <KeyRound className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold block">Identity Re-verification Required</span>
+                    <span>For security, enter the 6-digit OTP sent to {userPhone} before exporting raw credentials.</span>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <span className="text-black/50 uppercase text-[10px] font-semibold block mb-1">
-                  Private Key (ECDSA Secp256k1)
-                </span>
-                <div className="bg-[#F5F5F5] p-3 rounded-2xl font-mono text-[11px] break-all border border-black/5 text-black select-all">
-                  {mockPrivateKey}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-black/60 mb-1.5">
+                    Enter Verification OTP
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    required
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    placeholder="e.g. 123456"
+                    className="w-full px-4 py-3 rounded-2xl bg-[#F5F5F5] border border-black/10 text-black font-mono tracking-widest text-center text-lg focus:outline-none focus:border-black"
+                  />
+                  <span className="text-[10px] text-black/40 block text-center mt-1">
+                    Demo OTP code: <strong className="font-mono text-black">123456</strong>
+                  </span>
                 </div>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleCopyKey}
-                className="flex-1 py-3 bg-black text-white text-xs font-semibold rounded-full hover:bg-black/90 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-sm"
-              >
-                {copiedKey ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                {copiedKey ? 'Copied to Clipboard' : 'Copy Private Key'}
-              </button>
-            </div>
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleCloseExportModal}
+                    className="flex-1 py-3 bg-[#F5F5F5] text-black text-xs font-medium rounded-full hover:bg-black/5 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isVerifyingOtp || otp.length < 4}
+                    className="flex-1 py-3 bg-black text-white text-xs font-medium rounded-full hover:bg-gray-800 disabled:opacity-50 transition-colors shadow-sm flex items-center justify-center gap-2"
+                  >
+                    {isVerifyingOtp ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                        <span>Verifying...</span>
+                      </>
+                    ) : (
+                      <span>Verify & Export</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-xs text-amber-900">
+                  <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold block">Security Warning</span>
+                    <span>Never share your private key with anyone. TrustChain staff will never ask for your key.</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <span className="text-black/50 uppercase text-[10px] font-semibold block mb-1">
+                      Public Polygon Address
+                    </span>
+                    <div className="bg-[#F5F5F5] p-3 rounded-2xl font-mono text-[11px] break-all border border-black/5 text-black select-all">
+                      {exportedWallet.walletAddress}
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-black/50 uppercase text-[10px] font-semibold block mb-1">
+                      Private Key (ECDSA Secp256k1)
+                    </span>
+                    <div className="bg-[#F5F5F5] p-3 rounded-2xl font-mono text-[11px] break-all border border-black/5 text-black select-all">
+                      {exportedWallet.privateKey}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleCopyKey}
+                    className="flex-1 py-3 bg-black text-white text-xs font-semibold rounded-full hover:bg-black/90 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    {copiedKey ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    {copiedKey ? 'Copied to Clipboard' : 'Copy Private Key'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

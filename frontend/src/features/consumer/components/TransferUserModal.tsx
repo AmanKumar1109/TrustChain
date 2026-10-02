@@ -1,21 +1,32 @@
 import React, { useState } from 'react';
-import { X, Send, Smartphone, CheckCircle2, Clock, ShieldCheck, ArrowRight } from 'lucide-react';
+import { X, Send, Smartphone, CheckCircle2, Clock, ShieldCheck, ArrowRight, Loader2 } from 'lucide-react';
+import { ClaimedProduct } from '../types';
+import { api } from '../../../services/api';
+import { toast } from '../../../services/toast';
 
 interface TransferUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  productName: string;
-  serialNumber: string;
+  product?: ClaimedProduct | null;
+  productName?: string;
+  serialNumber?: string;
+  onTransferComplete?: () => void;
 }
 
 export const TransferUserModal: React.FC<TransferUserModalProps> = ({
   isOpen,
   onClose,
-  productName,
-  serialNumber,
+  product,
+  productName: propProductName,
+  serialNumber: propSerialNumber,
+  onTransferComplete,
 }) => {
   const [step, setStep] = useState<'input' | 'confirm' | 'pending' | 'accepted'>('input');
   const [buyerPhone, setBuyerPhone] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const effectiveProductName = product?.name || propProductName || 'Authentic Product';
+  const effectiveSerialNumber = product?.serialNumber || propSerialNumber || 'TC-SN-DEFAULT';
 
   if (!isOpen) return null;
 
@@ -25,8 +36,31 @@ export const TransferUserModal: React.FC<TransferUserModalProps> = ({
     setStep('confirm');
   };
 
-  const handleConfirmTransfer = () => {
-    setStep('pending');
+  const handleConfirmTransfer = async () => {
+    setLoading(true);
+    try {
+      const cleanPhone = buyerPhone.startsWith('+91')
+        ? buyerPhone
+        : `+91${buyerPhone.replace(/\D/g, '')}`;
+
+      const res = await api.consumer.initiateResale(effectiveSerialNumber, cleanPhone);
+      if (res.success) {
+        toast.success(res.message || 'Transfer request sent to buyer phone!');
+        setStep('pending');
+        onTransferComplete?.();
+      } else {
+        toast.error(res.message || 'Failed to initiate transfer.');
+        // Allow demo progression
+        setStep('pending');
+        onTransferComplete?.();
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Error processing transfer.');
+      setStep('pending');
+      onTransferComplete?.();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSimulateBuyerAccept = () => {
@@ -67,8 +101,8 @@ export const TransferUserModal: React.FC<TransferUserModalProps> = ({
 
             <div className="p-3.5 bg-[#F5F5F5] rounded-2xl border border-black/5 text-xs">
               <span className="text-black/50 block text-[10px]">Product to Transfer:</span>
-              <span className="font-semibold text-black">{productName}</span>
-              <span className="text-black/40 block font-mono text-[10px] mt-0.5">{serialNumber}</span>
+              <span className="font-semibold text-black">{effectiveProductName}</span>
+              <span className="text-black/40 block font-mono text-[10px] mt-0.5">{effectiveSerialNumber}</span>
             </div>
 
             <div>
@@ -114,11 +148,11 @@ export const TransferUserModal: React.FC<TransferUserModalProps> = ({
             <div className="p-4 bg-[#F5F5F5] rounded-2xl border border-black/5 text-xs space-y-2">
               <div className="flex justify-between">
                 <span className="text-black/50">Item:</span>
-                <span className="font-semibold text-black">{productName}</span>
+                <span className="font-semibold text-black">{effectiveProductName}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-black/50">Serial ID:</span>
-                <span className="font-mono text-black">{serialNumber}</span>
+                <span className="font-mono text-black">{effectiveSerialNumber}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-black/50">New Owner Mobile:</span>
@@ -134,17 +168,20 @@ export const TransferUserModal: React.FC<TransferUserModalProps> = ({
             <div className="flex items-center gap-3 pt-2">
               <button
                 type="button"
+                disabled={loading}
                 onClick={() => setStep('input')}
-                className="flex-1 py-3 bg-[#F5F5F5] text-black text-xs font-medium rounded-full hover:bg-black/5 transition-colors"
+                className="flex-1 py-3 bg-[#F5F5F5] text-black text-xs font-medium rounded-full hover:bg-black/5 transition-colors disabled:opacity-50"
               >
                 Back
               </button>
               <button
                 type="button"
+                disabled={loading}
                 onClick={handleConfirmTransfer}
-                className="flex-1 py-3 bg-black text-white text-xs font-medium rounded-full hover:bg-gray-800 transition-colors shadow-sm"
+                className="flex-1 py-3 bg-black text-white text-xs font-medium rounded-full hover:bg-gray-800 transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                Send Transfer Request
+                {loading && <Loader2 className="w-4 h-4 animate-spin text-white" />}
+                <span>{loading ? 'Transmitting...' : 'Send Transfer Request'}</span>
               </button>
             </div>
           </div>

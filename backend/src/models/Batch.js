@@ -77,7 +77,7 @@ const batchSchema = new mongoose.Schema(
     },
     protectionLevel: {
       type: String,
-      enum: ['Standard', 'HighValue'],
+      enum: ['Standard', 'HighValue', 'High-Value'],
       default: 'Standard',
       index: true,
     },
@@ -96,7 +96,6 @@ const batchSchema = new mongoose.Schema(
     },
     expiryTimestamp: {
       type: Number,
-      required: true,
     },
     inrCost: {
       type: Number,
@@ -108,11 +107,16 @@ const batchSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['active', 'recalled', 'expired'],
+      enum: ['active', 'recalled', 'expired', 'Active', 'Recalled', 'Expired'],
       default: 'active',
       index: true,
     },
     isRecalled: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    recalled: {
       type: Boolean,
       default: false,
       index: true,
@@ -127,12 +131,31 @@ const batchSchema = new mongoose.Schema(
   }
 );
 
-// Pre-save hook to ensure batchId and batchNumber stay in sync
+// Pre-save hook to ensure batchId, batchNumber, bytes32, and timestamps stay in sync
 batchSchema.pre('validate', function (next) {
   if (this.batchNumber && !this.batchId) {
     this.batchId = this.batchNumber;
   } else if (this.batchId && !this.batchNumber) {
     this.batchNumber = this.batchId;
+  }
+  if (!this.batchIdBytes32 && (this.batchId || this.batchNumber)) {
+    const { ethers } = require('ethers');
+    this.batchIdBytes32 = ethers.id(this.batchId || this.batchNumber);
+  }
+  if (this.expiryDate && !this.expiryTimestamp) {
+    this.expiryTimestamp = Math.floor(new Date(this.expiryDate).getTime() / 1000);
+  } else if (this.expiryTimestamp && !this.expiryDate) {
+    this.expiryDate = new Date(this.expiryTimestamp * 1000);
+  }
+  if (this.status) {
+    this.status = this.status.toLowerCase();
+  }
+  if (this.recalled || this.status === 'recalled') {
+    this.isRecalled = true;
+    this.status = 'recalled';
+  }
+  if (!this.manufacturerWallet) {
+    this.manufacturerWallet = '0x0000000000000000000000000000000000000000';
   }
   next();
 });

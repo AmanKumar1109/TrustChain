@@ -15,6 +15,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const { ethers } = require('ethers');
 const config = require('../src/config/env');
+const { ensureMongoServer } = require('../src/config/embeddedMongo');
 const { MerkleTreeBuilder, leafHash } = require('../src/utils/merkle');
 const walletService = require('../src/services/wallet.service');
 const contractService = require('../src/services/contract.service');
@@ -80,7 +81,8 @@ async function seed() {
 
   try {
     try {
-      await mongoose.connect(config.mongoUri, { serverSelectionTimeoutMS: 4000 });
+      await ensureMongoServer(config.mongoUri);
+      await mongoose.connect(config.mongoUri, { serverSelectionTimeoutMS: 5000 });
       console.log(`✅ Connected to MongoDB: ${config.mongoUri}`);
     } catch (dbErr) {
       console.error('\n❌ Could not connect to MongoDB at:', config.mongoUri);
@@ -133,7 +135,7 @@ async function seed() {
       walletAddress: mfgWallet.address,
       encryptedPrivateKey: mfgWallet.encryptedPrivateKey,
       brandStatus: 'approved',
-      plan: 'GROWTH',
+      plan: { name: 'Growth', code: 'GROWTH' },
       companyProfile: {
         legalBusinessName: 'Cipla Limited India',
         gstin: '27AAACC1206D1ZM',
@@ -200,10 +202,12 @@ async function seed() {
     // 2. SEED BRAND (APPROVED DEMO BRAND)
     console.log('\n🏢 Seeding Brand & KYB Onboarding...');
     const brand = await Brand.create({
+      companyName: 'Cipla Pharmaceuticals Ltd',
       name: 'Cipla Pharmaceuticals Ltd',
       legalBusinessName: 'Cipla Limited India',
       cin: 'L24239MH1935PLC002380',
       gstin: '27AAACC1206D1ZM',
+      gst: '27AAACC1206D1ZM',
       manufacturer: manufacturer._id,
       officialEmail: 'compliance@cipla.com',
       phone: '+919876500001',
@@ -358,12 +362,15 @@ async function seed() {
         unitCode: code,
         batch: batch1._id,
         batchNumber: batch1.batchNumber,
+        batchId: batch1.batchId,
         product: asthalinProduct._id,
         productName: asthalinProduct.name,
         brand: brand._id,
         brandName: brand.name,
         manufacturer: manufacturer._id,
         status,
+        leafHash: leafHash(code),
+        proof: tree1.getProof(code),
         merkleProof: tree1.getProof(code),
         ...soldDetails,
       });
@@ -407,12 +414,15 @@ async function seed() {
       unitCode: code,
       batch: batch2._id,
       batchNumber: batch2.batchNumber,
+      batchId: batch2.batchId,
       product: montairProduct._id,
       productName: montairProduct.name,
       brand: brand._id,
       brandName: brand.name,
       manufacturer: manufacturer._id,
       status: 'recalled',
+      leafHash: leafHash(code),
+      proof: tree2.getProof(code),
       merkleProof: tree2.getProof(code),
     }));
     await Unit.insertMany(units2Docs);

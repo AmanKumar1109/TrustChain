@@ -6,3 +6,4 @@ uploads/
 logs/
 *.log
 npm-debug.log*
+.mongo-data/

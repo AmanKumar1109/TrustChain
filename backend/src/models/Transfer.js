@@ -10,7 +10,11 @@ const timelineEventSchema = new mongoose.Schema(
     action: {
       type: String,
       enum: ['INITIATED', 'ACCEPTED', 'REJECTED'],
-      required: true,
+      default: function () {
+        if (!this.status) return 'INITIATED';
+        const s = this.status.toUpperCase();
+        return ['INITIATED', 'ACCEPTED', 'REJECTED'].includes(s) ? s : 'INITIATED';
+      },
     },
     timestamp: {
       type: Date,
@@ -79,10 +83,15 @@ const transferSchema = new mongoose.Schema(
       default: '',
       trim: true,
     },
+    from: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: function () { return this.fromUser; },
+    },
     fromUser: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      default: function () { return this.from; },
       index: true,
     },
     fromPartner: {
@@ -101,13 +110,18 @@ const transferSchema = new mongoose.Schema(
     },
     fromWallet: {
       type: String,
-      required: true,
+      default: '0x0000000000000000000000000000000000000000',
       trim: true,
+    },
+    to: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: function () { return this.toUser; },
     },
     toUser: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      default: function () { return this.to; },
       index: true,
     },
     toPartner: {
@@ -127,7 +141,7 @@ const transferSchema = new mongoose.Schema(
     },
     toWallet: {
       type: String,
-      required: true,
+      default: '0x0000000000000000000000000000000000000000',
       trim: true,
     },
     quantity: {
@@ -166,13 +180,19 @@ const transferSchema = new mongoose.Schema(
   }
 );
 
-// Pre-save hook to ensure batchId and batchNumber stay in sync
+// Pre-save hook to ensure batchId, batchNumber, from/to, and wallets stay in sync
 transferSchema.pre('validate', function (next) {
   if (this.batchNumber && !this.batchId) {
     this.batchId = this.batchNumber;
   } else if (this.batchId && !this.batchNumber) {
     this.batchNumber = this.batchId;
   }
+  if (!this.fromUser && this.from) this.fromUser = this.from;
+  if (!this.from && this.fromUser) this.from = this.fromUser;
+  if (!this.toUser && this.to) this.toUser = this.to;
+  if (!this.to && this.toUser) this.to = this.toUser;
+  if (!this.fromWallet) this.fromWallet = '0x0000000000000000000000000000000000000000';
+  if (!this.toWallet) this.toWallet = '0x0000000000000000000000000000000000000000';
   next();
 });
 

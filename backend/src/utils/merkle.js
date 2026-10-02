@@ -39,7 +39,17 @@ class MerkleTreeBuilder {
   }
 }
 
+/**
+ * Verifies a Merkle proof for a given unit code against a root.
+ */
+function verifyProof(unitCode, proof, root) {
+  if (!unitCode || !proof || !root) return false;
+  const leaf = leafHash(unitCode);
+  return MerkleTree.verify(proof, leaf, root, ethers.keccak256, { sortPairs: true });
+}
+
 module.exports = {
   leafHash,
   MerkleTreeBuilder,
+  verifyProof,
 };

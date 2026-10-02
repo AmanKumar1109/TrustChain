@@ -72,15 +72,19 @@ const partnerSchema = new mongoose.Schema(
     },
     name: {
       type: String,
-      required: true,
       trim: true,
+      default: function () { return this.businessName || 'Supply Chain Partner'; },
     },
     email: {
       type: String,
-      required: true,
       trim: true,
       lowercase: true,
       index: true,
+      default: function () {
+        return this.businessName
+          ? `${this.businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}@partner.com`
+          : 'partner@trustchain.com';
+      },
     },
     phone: {
       type: String,
@@ -101,10 +105,20 @@ const partnerSchema = new mongoose.Schema(
     },
     gst: {
       type: String,
-      required: true,
       trim: true,
       uppercase: true,
       index: true,
+      default: function () { return this.gstNumber || '07AAAAA0000A1Z5'; },
+    },
+    gstNumber: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: '',
+    },
+    reputationScore: {
+      type: Number,
+      default: 90,
     },
     businessDetails: {
       type: businessDetailsSchema,
@@ -132,7 +146,7 @@ const partnerSchema = new mongoose.Schema(
     onboardingMethod: {
       type: String,
       enum: ['invite', 'self-apply'],
-      required: true,
+      default: 'invite',
       index: true,
     },
     invitedBy: {

@@ -61,6 +61,11 @@ async function main() {
   await tx.wait();
   console.log(`Granted RELAYER_ROLE on TrustChainRegistry to: ${relayer.address}`);
 
+  const DEFAULT_ADMIN_ROLE = await registry.DEFAULT_ADMIN_ROLE();
+  tx = await registry.connect(deployer).grantRole(DEFAULT_ADMIN_ROLE, relayer.address);
+  await tx.wait();
+  console.log(`Granted DEFAULT_ADMIN_ROLE on TrustChainRegistry to: ${relayer.address}`);
+
   // Grant to TrustChain Base
   tx = await trustChain.connect(deployer).grantRole(BASE_RELAYER_ROLE, relayer.address);
   await tx.wait();

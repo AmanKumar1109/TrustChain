@@ -21,8 +21,9 @@ const unitSchema = new mongoose.Schema(
     },
     batchId: {
       type: String,
-      required: true,
+      trim: true,
       index: true,
+      default: function () { return this.batchNumber || ''; },
     },
     product: {
       type: mongoose.Schema.Types.ObjectId,
@@ -35,16 +36,28 @@ const unitSchema = new mongoose.Schema(
     },
     leafHash: {
       type: String,
-      required: true,
       index: true,
+      default: function () {
+        if (!this.unitCode) return '';
+        try {
+          const { leafHash } = require('../utils/merkle');
+          return leafHash(this.unitCode);
+        } catch (_) {
+          return '';
+        }
+      },
     },
     proof: {
       type: [String],
-      required: true,
+      default: [],
+    },
+    merkleProof: {
+      type: [String],
+      default: [],
     },
     status: {
       type: String,
-      enum: ['inStock', 'allocated', 'inTransit', 'sold', 'claimed', 'recalled'],
+      enum: ['inStock', 'allocated', 'inTransit', 'sold', 'claimed', 'recalled', 'soldAwaitingClaim', 'sold_awaiting_claim'],
       default: 'inStock',
       index: true,
     },

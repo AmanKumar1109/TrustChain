@@ -8,23 +8,23 @@ const productImageSchema = new mongoose.Schema(
     },
     filename: {
       type: String,
-      required: true,
+      default: 'product.jpg',
     },
     originalName: {
       type: String,
-      required: true,
+      default: 'product.jpg',
     },
     path: {
       type: String,
-      required: true,
+      default: '',
     },
     mimetype: {
       type: String,
-      required: true,
+      default: 'image/jpeg',
     },
     size: {
       type: Number,
-      required: true,
+      default: 0,
     },
     isPrimary: {
       type: Boolean,
@@ -81,6 +81,19 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    mrp: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    protectionLevelDefault: {
+      type: String,
+      default: 'Standard',
+    },
+    warrantyPeriodMonths: {
+      type: Number,
+      default: 12,
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -91,6 +104,22 @@ const productSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Auto-convert string image URLs to schema objects if needed
+productSchema.pre('validate', function(next) {
+  if (Array.isArray(this.images)) {
+    this.images = this.images.map(img => {
+      if (typeof img === 'string') {
+        return { url: img, filename: 'product.jpg', originalName: 'product.jpg', path: img, mimetype: 'image/jpeg', size: 1024 };
+      }
+      return img;
+    });
+  }
+  if (this.mrp && !this.price) {
+    this.price = this.mrp;
+  }
+  next();
+});
 
 // Compound index to ensure SKU is unique per manufacturer
 productSchema.index({ manufacturer: 1, sku: 1 }, { unique: true });

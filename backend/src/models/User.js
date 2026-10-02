@@ -118,7 +118,7 @@ const userSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['ACTIVE', 'SUSPENDED'],
+      enum: ['ACTIVE', 'SUSPENDED', 'VERIFIED'],
       default: 'ACTIVE',
     },
     // Billing Plan for Manufacturers
@@ -189,6 +189,11 @@ userSchema.pre('validate', function (next) {
 // Hash password before saving if modified
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password') || !this.password) {
+    return next();
+  }
+
+  // Prevent double-hashing if already a bcrypt hash
+  if (this.password.startsWith('$2a$') || this.password.startsWith('$2b$')) {
     return next();
   }
 

@@ -5,13 +5,13 @@ const partnerInventorySchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      default: function () { return this.partner; },
       index: true,
     },
     partner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Partner',
-      default: null,
+      default: function () { return this.user; },
       index: true,
     },
     batch: {

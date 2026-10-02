@@ -9,7 +9,7 @@ const Scan = require('../models/Scan');
 const blockchainService = require('../services/blockchain.service');
 const contractService = require('../services/contract.service');
 const rewardService = require('../services/reward.service');
-const { leafHash, MerkleTreeBuilder } = require('../utils/merkle');
+const { leafHash, MerkleTreeBuilder, verifyProof } = require('../utils/merkle');
 const { successResponse, errorResponse } = require('../utils/response');
 const config = require('../config/env');
 
@@ -299,17 +299,21 @@ const verifyProduct = async (req, res, next) => {
       );
     } catch (chainErr) {
       console.warn(`[Blockchain Warning] verifyUnitOnChain simulated/fallback: ${chainErr.message}`);
-      // Cryptographic local verification matching TrustChainRegistry.sol
-      const leaf = leafHash(unit.unitCode);
-      const isProofValid = MerkleTree.verify(proof, leaf, batch.merkleRoot);
-      onChainResult = {
-        exists: isProofValid,
-        expired: new Date() > new Date(batch.expiryDate),
-        recalled: batch.isRecalled,
-        recallReason: batch.recallReason || '',
-        soldState: unit.soldState || 0,
-        currentOwner: unit.currentOwnerWallet,
-      };
+    }
+
+    // Cryptographic verification fallback if not registered directly on live test chain
+    if (!onChainResult || !onChainResult.exists) {
+      const isProofValid = verifyProof(unit.unitCode, proof, batch.merkleRoot);
+      if (isProofValid) {
+        onChainResult = {
+          exists: true,
+          expired: new Date() > new Date(batch.expiryDate),
+          recalled: batch.isRecalled || batch.recalled || batch.status === 'recalled',
+          recallReason: batch.recallReason || '',
+          soldState: unit.soldState || 0,
+          currentOwner: unit.currentOwnerWallet,
+        };
+      }
     }
 
     const timeline = await buildOwnershipTimeline(batch, unit, clientCity, 'pending', null, reqUser);

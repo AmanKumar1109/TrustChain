@@ -45,10 +45,26 @@ const brandSchema = new mongoose.Schema(
     },
     companyName: {
       type: String,
-      required: true,
       trim: true,
+      default: function() { return this.name || ''; },
+    },
+    name: {
+      type: String,
+      trim: true,
+      default: function() { return this.companyName || ''; },
+    },
+    legalBusinessName: {
+      type: String,
+      trim: true,
+      default: '',
     },
     gst: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: '',
+    },
+    gstin: {
       type: String,
       trim: true,
       uppercase: true,
@@ -59,6 +75,30 @@ const brandSchema = new mongoose.Schema(
       trim: true,
       uppercase: true,
       default: '',
+    },
+    officialEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: '',
+    },
+    phone: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    website: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    categories: {
+      type: [String],
+      default: [],
+    },
+    reputationScore: {
+      type: Number,
+      default: 95,
     },
     status: {
       type: String,

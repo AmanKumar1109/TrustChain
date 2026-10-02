@@ -318,8 +318,174 @@ class ApiService {
   };
 
   // ==========================================
+  // 3B. PRODUCTS CATALOG
+  // ==========================================
+  public products = {
+    getProducts: async (params?: { page?: number; limit?: number; search?: string; category?: string }) => {
+      const qs = new URLSearchParams(params as any).toString();
+      return this.request(`/products${qs ? `?${qs}` : ''}`);
+    },
+
+    getProductById: async (id: string) => {
+      return this.request(`/products/${id}`);
+    },
+
+    createProduct: async (data: FormData | { name: string; sku: string; category: string; description?: string; price?: number }) => {
+      return this.request('/products', {
+        method: 'POST',
+        body: data instanceof FormData ? data : JSON.stringify(data),
+      });
+    },
+
+    updateProduct: async (id: string, data: FormData | { name?: string; sku?: string; category?: string; description?: string; price?: number }) => {
+      return this.request(`/products/${id}`, {
+        method: 'PUT',
+        body: data instanceof FormData ? data : JSON.stringify(data),
+      });
+    },
+
+    deleteProduct: async (id: string) => {
+      return this.request(`/products/${id}`, {
+        method: 'DELETE',
+      });
+    },
+  };
+
+  // ==========================================
+  // 3C. ANALYTICS & INSIGHTS
+  // ==========================================
+  public analytics = {
+    getManufacturerAnalytics: async (params?: {
+      startDate?: string;
+      endDate?: string;
+      productId?: string;
+      batchNumber?: string;
+    }) => {
+      const qs = new URLSearchParams(params as any).toString();
+      return this.request(`/analytics/manufacturer${qs ? `?${qs}` : ''}`);
+    },
+  };
+
+  // ==========================================
+  // 3D. BILLING & CREDITS
+  // ==========================================
+  public billing = {
+    getOverview: async () => {
+      return this.request('/billing/overview');
+    },
+
+    getPlan: async () => {
+      return this.request('/billing/plan');
+    },
+
+    topup: async (data: { amountInr: number; paymentMethod: 'UPI' | 'Card' | 'NetBanking' }) => {
+      return this.request('/billing/topup', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    getUsage: async (params?: { page?: number; limit?: number }) => {
+      const qs = new URLSearchParams(params as any).toString();
+      return this.request(`/billing/usage${qs ? `?${qs}` : ''}`);
+    },
+
+    getInvoices: async () => {
+      return this.request('/billing/invoices');
+    },
+  };
+
+  // ==========================================
   // 4. PARTNER ONBOARDING & TRANSFERS
   // ==========================================
+  public transfers = {
+    getTransfers: async (params?: { status?: string; role?: string }) => {
+      const qs = new URLSearchParams(params as any).toString();
+      return this.request(`/transfers${qs ? `?${qs}` : ''}`);
+    },
+
+    getTransferById: async (id: string) => {
+      return this.request(`/transfers/${id}`);
+    },
+
+    createTransfer: async (data: {
+      batchId: string;
+      toPartnerId?: string;
+      toUserId?: string;
+      toWallet?: string;
+      quantity: number;
+      notes?: string;
+    }) => {
+      return this.request('/transfers', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    respondTransfer: async (transferId: string, accept: boolean, reason?: string, notes?: string) => {
+      return this.request(`/transfers/${transferId}/respond`, {
+        method: 'POST',
+        body: JSON.stringify({ accept, reason, notes }),
+      });
+    },
+
+    getIncoming: async (status?: string) => {
+      return this.request(`/transfers/incoming${status ? `?status=${status}` : ''}`);
+    },
+
+    getInventory: async () => {
+      return this.request('/transfers/inventory');
+    },
+  };
+
+  public settings = {
+    getCompanyProfile: async () => {
+      return this.request('/settings/company');
+    },
+
+    updateCompanyProfile: async (data: any) => {
+      return this.request('/settings/company', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
+
+    getTeamMembers: async () => {
+      return this.request('/settings/team');
+    },
+
+    inviteTeamMember: async (data: { name: string; email: string; role: string }) => {
+      return this.request('/settings/team', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    updateTeamMember: async (id: string, data: any) => {
+      return this.request(`/settings/team/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
+
+    removeTeamMember: async (id: string) => {
+      return this.request(`/settings/team/${id}`, {
+        method: 'DELETE',
+      });
+    },
+
+    getNotificationPreferences: async () => {
+      return this.request('/settings/notifications');
+    },
+
+    updateNotificationPreferences: async (data: any) => {
+      return this.request('/settings/notifications', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
+  };
+
   public partners = {
     getPartners: async (role?: string) => {
       return this.request(`/partners${role ? `?role=${role}` : ''}`);
@@ -470,10 +636,16 @@ class ApiService {
       });
     },
 
-    claimUnit: async (claimToken: string, otp: string = '123456') => {
+    claimUnit: async (
+      payload: { claimToken?: string; unitCode?: string; code?: string; otp?: string } | string,
+      otpFallback: string = '123456'
+    ) => {
+      const body = typeof payload === 'string'
+        ? { claimToken: payload, otp: otpFallback }
+        : { otp: '123456', ...payload };
       return this.request('/claim', {
         method: 'POST',
-        body: JSON.stringify({ claimToken, otp }),
+        body: JSON.stringify(body),
       });
     },
   };

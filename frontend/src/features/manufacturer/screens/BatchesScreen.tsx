@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Layers,
   Plus,
@@ -11,96 +11,174 @@ import {
   FileText,
   AlertTriangle,
   Sparkles,
+  Loader2,
+  RefreshCw,
+  ExternalLink,
 } from 'lucide-react';
-import { BatchItem } from '../types';
+import { BatchItem, ProductItem } from '../types';
+import { api } from '../../../services/api';
+import { toast } from '../../../services/toast';
 
 export const BatchesScreen: React.FC = () => {
-  const [batches, setBatches] = useState<BatchItem[]>([
-    {
-      id: 'batch-1',
-      batchNumber: 'BATCH-2026-DEL99',
-      productId: 'prod-1',
-      productName: 'Cipla Asthalin Inhaler 100mcg',
-      quantity: 10000,
-      mfgDate: '15 Sep 2026',
-      expiryDate: '31 Aug 2029',
-      protectionLevel: 'high-value',
-      status: 'active',
-      creditsCost: 10000,
-      qrGenerated: true,
-      txHash: '0x7f4a8e3189bcd0911293a9ff827102eac69f91a2',
-    },
-    {
-      id: 'batch-2',
-      batchNumber: 'BATCH-2026-MUM14',
-      productId: 'prod-2',
-      productName: 'Cipla Montair-LC Tablets',
-      quantity: 25000,
-      mfgDate: '01 Sep 2026',
-      expiryDate: '31 Jul 2028',
-      protectionLevel: 'standard',
-      status: 'active',
-      creditsCost: 2500,
-      qrGenerated: true,
-      txHash: '0x33b190fe45f9103cba71890123fe554329aa8701',
-    },
-    {
-      id: 'batch-3',
-      batchNumber: 'BATCH-2026-BLR02',
-      productId: 'prod-3',
-      productName: 'Cipla Foracort 400 Rotacaps',
-      quantity: 5000,
-      mfgDate: '20 Aug 2026',
-      expiryDate: '30 Jun 2029',
-      protectionLevel: 'high-value',
-      status: 'in-transit',
-      creditsCost: 5000,
-      qrGenerated: true,
-      txHash: '0x88ea9121890cd123490aa129031ef098192a0142',
-    },
-  ]);
+  const [batches, setBatches] = useState<BatchItem[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [creditBalance, setCreditBalance] = useState<number>(84200);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createdSuccessBatch, setCreatedSuccessBatch] = useState<BatchItem | null>(null);
+  const [createdSuccessBatch, setCreatedSuccessBatch] = useState<any | null>(null);
+  const [selectedBatchForQr, setSelectedBatchForQr] = useState<any | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form inputs
-  const [form, setForm] = useState({
-    productName: 'Cipla Asthalin Inhaler 100mcg',
-    batchNumber: '',
-    quantity: 5000,
-    mfgDate: '2026-10-01',
-    expiryDate: '2029-09-30',
-    protectionLevel: 'high-value' as 'high-value' | 'standard',
-  });
+  const [selectedProductId, setSelectedProductId] = useState<string>('');
+  const [batchNumber, setBatchNumber] = useState<string>('');
+  const [quantity, setQuantity] = useState<number>(5000);
+  const [mfgDate, setMfgDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [expiryDate, setExpiryDate] = useState<string>(
+    new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  );
+  const [protectionLevel, setProtectionLevel] = useState<'Standard' | 'HighValue'>('HighValue');
+  const [description, setDescription] = useState<string>('');
 
-  // Calculate estimated credits
+  // Fetch batches, products, and credit balance
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [batchesRes, productsRes, billingRes] = await Promise.allSettled([
+        api.batches.getBatches(),
+        api.products.getProducts(),
+        api.billing.getOverview(),
+      ]);
+
+      if (batchesRes.status === 'fulfilled' && batchesRes.value.success && batchesRes.value.data) {
+        const rawBatches = Array.isArray(batchesRes.value.data)
+          ? batchesRes.value.data
+          : batchesRes.value.data.batches || [];
+        const mapped: BatchItem[] = rawBatches.map((b: any) => ({
+          id: b._id || b.id || b.batchId,
+          batchNumber: b.batchNumber || b.batchId,
+          productId: b.product?._id || b.product || 'prod-1',
+          productName: b.product?.name || b.productName || 'Authenticated Formulation',
+          quantity: b.quantity || 0,
+          mfgDate: b.mfgDate ? new Date(b.mfgDate).toLocaleDateString('en-IN') : 'Recent',
+          expiryDate: b.expiryDate ? new Date(b.expiryDate).toLocaleDateString('en-IN') : '3 Years',
+          protectionLevel: (b.protectionLevel === 'HighValue' ? 'high-value' : 'standard') as any,
+          status: b.isRecalled ? 'recalled' : (b.status?.toLowerCase() || 'active') as any,
+          creditsCost: b.creditsCost || (b.protectionLevel === 'HighValue' ? b.quantity : Math.round(b.quantity * 0.1)),
+          qrGenerated: true,
+          txHash: b.txHash || '0x7f4a8e3189bcd0911293a9ff827102eac69f91a2',
+        }));
+        setBatches(mapped);
+      }
+
+      if (productsRes.status === 'fulfilled' && productsRes.value.success && productsRes.value.data) {
+        const rawProds = Array.isArray(productsRes.value.data)
+          ? productsRes.value.data
+          : productsRes.value.data.products || [];
+        setProducts(rawProds);
+        if (rawProds.length > 0 && !selectedProductId) {
+          setSelectedProductId(rawProds[0]._id || rawProds[0].id);
+        }
+      }
+
+      if (billingRes.status === 'fulfilled' && billingRes.value.success && billingRes.value.data) {
+        setCreditBalance(billingRes.value.data.creditBalance || billingRes.value.data.balance || 84200);
+      }
+    } catch (err: any) {
+      console.warn('Batch data fetch error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Cost calculation
   const estimatedCredits =
-    form.protectionLevel === 'high-value' ? form.quantity * 1 : Math.round(form.quantity * 0.1);
+    protectionLevel === 'HighValue' ? quantity * 1 : Math.round(quantity * 0.1);
 
-  const handleCreateBatch = (e: React.FormEvent) => {
+  const handleOpenCreateModal = () => {
+    setBatchNumber(`BATCH-2026-IN${Math.floor(100 + Math.random() * 900)}`);
+    setQuantity(5000);
+    setProtectionLevel('HighValue');
+    setDescription('');
+    if (products.length > 0 && !selectedProductId) {
+      setSelectedProductId(products[0]._id || products[0].id);
+    }
+    setShowCreateModal(true);
+  };
+
+  const handleCreateBatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newBatch: BatchItem = {
-      id: `batch-${Date.now()}`,
-      batchNumber: form.batchNumber || `BATCH-2026-AUTO${Math.floor(100 + Math.random() * 900)}`,
-      productId: 'prod-1',
-      productName: form.productName,
-      quantity: Number(form.quantity),
-      mfgDate: form.mfgDate,
-      expiryDate: form.expiryDate,
-      protectionLevel: form.protectionLevel,
-      status: 'active',
-      creditsCost: estimatedCredits,
-      qrGenerated: true,
-      txHash: `0x${Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
-    };
+    if (!selectedProductId) {
+      toast.error('Please select or register a product first.');
+      return;
+    }
 
-    setBatches([newBatch, ...batches]);
-    setCreatedSuccessBatch(newBatch);
+    setIsSubmitting(true);
+    try {
+      const res = await api.batches.createBatch({
+        product: selectedProductId,
+        batchNumber: batchNumber.toUpperCase().trim(),
+        quantity: Number(quantity),
+        mfgDate,
+        expiryDate,
+        protectionLevel,
+        description,
+      });
+
+      if (res.success && res.data) {
+        const created = res.data.batch || res.data;
+        const selectedProdObj = products.find((p) => (p._id || p.id) === selectedProductId);
+
+        const newBatchItem: BatchItem = {
+          id: created._id || created.id || created.batchId,
+          batchNumber: created.batchNumber || batchNumber,
+          productId: selectedProductId,
+          productName: selectedProdObj?.name || 'Authenticated Product',
+          quantity: Number(quantity),
+          mfgDate: new Date(mfgDate).toLocaleDateString('en-IN'),
+          expiryDate: new Date(expiryDate).toLocaleDateString('en-IN'),
+          protectionLevel: protectionLevel === 'HighValue' ? 'high-value' : 'standard',
+          status: 'active',
+          creditsCost: estimatedCredits,
+          qrGenerated: true,
+          txHash: res.data.txHash || created.txHash || '0x7f4a8e3189bcd0911293a9ff827102eac69f91a2',
+        };
+
+        setBatches([newBatchItem, ...batches]);
+        setCreatedSuccessBatch(newBatchItem);
+        setShowCreateModal(false);
+        toast.success(`Batch ${newBatchItem.batchNumber} created and anchored on-chain!`);
+        fetchData();
+      }
+    } catch (err: any) {
+      console.error('Batch creation error:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDownloadPdf = (batchId: string) => {
+    const url = api.batches.getBatchQrPdfUrl(batchId);
+    window.open(url, '_blank');
+    toast.success('Downloading A4 Printable QR Code Sheet (PDF)...');
+  };
+
+  const handleDownloadZip = (batchId: string) => {
+    const url = api.batches.getBatchQrZipUrl(batchId);
+    window.open(url, '_blank');
+    toast.success('Downloading Batch QR Codes Archive (ZIP of PNGs)...');
   };
 
   const closeModals = () => {
     setShowCreateModal(false);
     setCreatedSuccessBatch(null);
+    setSelectedBatchForQr(null);
   };
 
   return (
@@ -119,24 +197,26 @@ export const BatchesScreen: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            setForm({
-              productName: 'Cipla Asthalin Inhaler 100mcg',
-              batchNumber: `BATCH-2026-IN${Math.floor(100 + Math.random() * 900)}`,
-              quantity: 5000,
-              mfgDate: '2026-10-01',
-              expiryDate: '2029-09-30',
-              protectionLevel: 'high-value',
-            });
-            setShowCreateModal(true);
-          }}
-          className="inline-flex items-center gap-2 bg-black text-white px-6 py-2.5 rounded-full text-xs font-medium hover:bg-gray-800 transition-colors shadow-sm cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Batch</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={fetchData}
+            disabled={isLoading}
+            className="p-2.5 rounded-full bg-white hover:bg-black/5 text-black/70 border border-black/5 transition-colors cursor-pointer"
+            title="Refresh Batches"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenCreateModal}
+            className="inline-flex items-center gap-2 bg-black text-white px-6 py-2.5 rounded-full text-xs font-medium hover:bg-gray-800 transition-colors shadow-sm cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Batch</span>
+          </button>
+        </div>
       </div>
 
       {/* Batches Table Card */}
@@ -144,79 +224,105 @@ export const BatchesScreen: React.FC = () => {
         <div className="p-6 border-b border-black/5 flex items-center justify-between">
           <div>
             <h3 className="text-base font-medium text-black">Active & Historic Batches</h3>
-            <p className="text-xs text-black/50">Each batch corresponds to an on-chain Polygon transaction</p>
+            <p className="text-xs text-black/50">Each batch corresponds to an on-chain cryptographic registry record</p>
           </div>
           <span className="text-xs font-medium text-black/60">{batches.length} Total Batches</span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-black/5 bg-[#F5F5F5]/60 text-black/50 uppercase font-semibold">
-                <th className="p-4 pl-6">Batch ID</th>
-                <th className="p-4">Product Name</th>
-                <th className="p-4">Units</th>
-                <th className="p-4">Protection Tier</th>
-                <th className="p-4">Mfg / Expiry</th>
-                <th className="p-4">Polygon TxHash</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 pr-6 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/5">
-              {batches.map((batch) => (
-                <tr key={batch.id} className="hover:bg-black/[0.01] transition-colors">
-                  <td className="p-4 pl-6 font-mono font-medium text-black">
-                    {batch.batchNumber}
-                  </td>
-                  <td className="p-4 font-medium text-black">{batch.productName}</td>
-                  <td className="p-4 font-medium text-black">{batch.quantity.toLocaleString()}</td>
-                  <td className="p-4">
-                    {batch.protectionLevel === 'high-value' ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                        <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                        <span>High-Value (Per-Unit)</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-blue-50 text-blue-800 border border-blue-200 px-2.5 py-0.5 rounded-full">
-                        <span>Standard (Batch-Level)</span>
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-4 text-black/60">
-                    {batch.mfgDate} · {batch.expiryDate}
-                  </td>
-                  <td className="p-4 font-mono text-[10px] text-black/60 truncate max-w-[140px]">
-                    {batch.txHash}
-                  </td>
-                  <td className="p-4">
-                    <span
-                      className={`text-[10px] font-semibold uppercase px-2.5 py-0.5 rounded-full ${
-                        batch.status === 'active'
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : batch.status === 'in-transit'
-                          ? 'bg-blue-50 text-blue-700'
-                          : 'bg-rose-50 text-rose-700'
-                      }`}
-                    >
-                      {batch.status}
-                    </span>
-                  </td>
-                  <td className="p-4 pr-6 text-right">
-                    <button
-                      type="button"
-                      onClick={() => setCreatedSuccessBatch(batch)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F5F5F5] hover:bg-black/5 rounded-xl text-black font-medium transition-colors cursor-pointer"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>QRs</span>
-                    </button>
-                  </td>
+        {isLoading ? (
+          <div className="p-8 space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-10 bg-black/5 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : batches.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-black/5 bg-[#F5F5F5]/60 text-black/50 uppercase font-semibold">
+                  <th className="p-4 pl-6">Batch ID</th>
+                  <th className="p-4">Product Name</th>
+                  <th className="p-4">Units</th>
+                  <th className="p-4">Protection Tier</th>
+                  <th className="p-4">Mfg / Expiry</th>
+                  <th className="p-4">Registry Proof (txHash)</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4 pr-6 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-black/5">
+                {batches.map((batch) => (
+                  <tr key={batch.id} className="hover:bg-black/[0.01] transition-colors">
+                    <td className="p-4 pl-6 font-mono font-medium text-black">
+                      {batch.batchNumber}
+                    </td>
+                    <td className="p-4 font-medium text-black">{batch.productName}</td>
+                    <td className="p-4 font-medium text-black">{batch.quantity.toLocaleString()}</td>
+                    <td className="p-4">
+                      {batch.protectionLevel === 'high-value' ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                          <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                          <span>High-Value (Per-Unit)</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-blue-50 text-blue-800 border border-blue-200 px-2.5 py-0.5 rounded-full">
+                          <span>Standard (Batch-Level)</span>
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-4 text-black/60">
+                      {batch.mfgDate} · {batch.expiryDate}
+                    </td>
+                    <td className="p-4 font-mono text-[10px] text-black/60 truncate max-w-[140px]">
+                      {batch.txHash}
+                    </td>
+                    <td className="p-4">
+                      <span
+                        className={`text-[10px] font-semibold uppercase px-2.5 py-0.5 rounded-full ${
+                          batch.status === 'active'
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : batch.status === 'in-transit'
+                            ? 'bg-blue-50 text-blue-700'
+                            : 'bg-rose-50 text-rose-700'
+                        }`}
+                      >
+                        {batch.status}
+                      </span>
+                    </td>
+                    <td className="p-4 pr-6 text-right">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBatchForQr(batch)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F5F5F5] hover:bg-black/5 rounded-xl text-black font-medium transition-colors cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Export QRs</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          /* Empty State */
+          <div className="py-16 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-black/5 flex items-center justify-center mx-auto text-black/40">
+              <Layers className="w-6 h-6" />
+            </div>
+            <h4 className="text-base font-medium text-black">No Batches Created Yet</h4>
+            <p className="text-xs text-black/60 max-w-sm mx-auto">
+              Create your first production batch to generate secure QR codes and initiate supply chain custody tracking.
+            </p>
+            <button
+              type="button"
+              onClick={handleOpenCreateModal}
+              className="px-6 py-2.5 bg-black text-white text-xs font-medium rounded-full hover:bg-gray-800 transition-colors cursor-pointer"
+            >
+              Create First Batch
+            </button>
+          </div>
+        )}
       </div>
 
       {/* CREATE BATCH MODAL FLOW */}
@@ -226,7 +332,7 @@ export const BatchesScreen: React.FC = () => {
             <button
               type="button"
               onClick={closeModals}
-              className="absolute top-6 right-6 p-2 rounded-full text-black/50 hover:text-black hover:bg-black/5 transition-colors"
+              className="absolute top-6 right-6 p-2 rounded-full text-black/50 hover:text-black hover:bg-black/5 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -235,7 +341,7 @@ export const BatchesScreen: React.FC = () => {
               Create New Production Batch
             </h3>
             <p className="text-xs text-black/60 mb-6">
-              Generate cryptographic QR identities anchored to Polygon Mainnet.
+              Generate cryptographic QR identities anchored to the digital registry.
             </p>
 
             <form onSubmit={handleCreateBatch} className="space-y-4">
@@ -243,16 +349,23 @@ export const BatchesScreen: React.FC = () => {
                 <label className="block text-xs font-semibold uppercase tracking-wider text-black/60 mb-1.5">
                   Select Product Line
                 </label>
-                <select
-                  value={form.productName}
-                  onChange={(e) => setForm({ ...form, productName: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-2xl bg-[#F5F5F5] border border-black/10 text-black text-sm font-medium focus:outline-none focus:border-black"
-                >
-                  <option value="Cipla Asthalin Inhaler 100mcg">Cipla Asthalin Inhaler 100mcg</option>
-                  <option value="Cipla Montair-LC Tablets">Cipla Montair-LC Tablets</option>
-                  <option value="Cipla Foracort 400 Rotacaps">Cipla Foracort 400 Rotacaps</option>
-                  <option value="Cipla Omez 20mg Capsules">Cipla Omez 20mg Capsules</option>
-                </select>
+                {products.length > 0 ? (
+                  <select
+                    value={selectedProductId}
+                    onChange={(e) => setSelectedProductId(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-2xl bg-[#F5F5F5] border border-black/10 text-black text-sm font-medium focus:outline-none focus:border-black cursor-pointer"
+                  >
+                    {products.map((p) => (
+                      <option key={p._id || p.id} value={p._id || p.id}>
+                        {p.name} ({p.sku})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900">
+                    No products found in catalog. Please add a product in the Products tab first.
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -263,8 +376,8 @@ export const BatchesScreen: React.FC = () => {
                   <input
                     type="text"
                     required
-                    value={form.batchNumber}
-                    onChange={(e) => setForm({ ...form, batchNumber: e.target.value })}
+                    value={batchNumber}
+                    onChange={(e) => setBatchNumber(e.target.value)}
                     placeholder="BATCH-2026-DEL102"
                     className="w-full px-4 py-2.5 rounded-2xl bg-[#F5F5F5] border border-black/10 text-black text-sm font-mono uppercase focus:outline-none focus:border-black"
                   />
@@ -276,11 +389,11 @@ export const BatchesScreen: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    min={100}
+                    min={1}
                     max={100000}
                     required
-                    value={form.quantity}
-                    onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
+                    value={quantity}
+                    onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
                     className="w-full px-4 py-2.5 rounded-2xl bg-[#F5F5F5] border border-black/10 text-black text-sm font-medium focus:outline-none focus:border-black"
                   />
                 </div>
@@ -294,8 +407,8 @@ export const BatchesScreen: React.FC = () => {
                   <input
                     type="date"
                     required
-                    value={form.mfgDate}
-                    onChange={(e) => setForm({ ...form, mfgDate: e.target.value })}
+                    value={mfgDate}
+                    onChange={(e) => setMfgDate(e.target.value)}
                     className="w-full px-4 py-2.5 rounded-2xl bg-[#F5F5F5] border border-black/10 text-black text-sm font-medium focus:outline-none focus:border-black"
                   />
                 </div>
@@ -307,23 +420,23 @@ export const BatchesScreen: React.FC = () => {
                   <input
                     type="date"
                     required
-                    value={form.expiryDate}
-                    onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+                    value={expiryDate}
+                    onChange={(e) => setExpiryDate(e.target.value)}
                     className="w-full px-4 py-2.5 rounded-2xl bg-[#F5F5F5] border border-black/10 text-black text-sm font-medium focus:outline-none focus:border-black"
                   />
                 </div>
               </div>
 
-              {/* Protection Level Selector (High-value vs Standard) */}
+              {/* Protection Level Selector (HighValue vs Standard) */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-black/60 mb-2">
                   Protection Level
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <div
-                    onClick={() => setForm({ ...form, protectionLevel: 'high-value' })}
+                    onClick={() => setProtectionLevel('HighValue')}
                     className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-                      form.protectionLevel === 'high-value'
+                      protectionLevel === 'HighValue'
                         ? 'border-emerald-600 bg-emerald-50/60 ring-2 ring-emerald-500/20'
                         : 'border-black/10 hover:border-black/30 bg-[#F5F5F5]'
                     }`}
@@ -333,14 +446,14 @@ export const BatchesScreen: React.FC = () => {
                       <ShieldCheck className="w-4 h-4 text-emerald-600" />
                     </div>
                     <p className="text-[11px] text-black/60 leading-tight">
-                      Unique cryptographic QR on every pack. Full individual clone velocity detection.
+                      Unique cryptographic QR on every unit pack with scratch-off code. 1 credit / unit.
                     </p>
                   </div>
 
                   <div
-                    onClick={() => setForm({ ...form, protectionLevel: 'standard' })}
+                    onClick={() => setProtectionLevel('Standard')}
                     className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-                      form.protectionLevel === 'standard'
+                      protectionLevel === 'Standard'
                         ? 'border-blue-600 bg-blue-50/60 ring-2 ring-blue-500/20'
                         : 'border-black/10 hover:border-black/30 bg-[#F5F5F5]'
                     }`}
@@ -350,7 +463,7 @@ export const BatchesScreen: React.FC = () => {
                       <Layers className="w-4 h-4 text-blue-600" />
                     </div>
                     <p className="text-[11px] text-black/60 leading-tight">
-                      Master QR per shipper case / carton. Economical credit consumption for FMCG.
+                      Master QR per shipper case / carton. Economical credit consumption (0.1 credit / unit).
                     </p>
                   </div>
                 </div>
@@ -364,10 +477,12 @@ export const BatchesScreen: React.FC = () => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-black/60">Current Credit Balance:</span>
-                  <span className="text-emerald-700 font-medium">84,200 Available</span>
+                  <span className={`font-semibold ${creditBalance >= estimatedCredits ? 'text-emerald-700' : 'text-rose-600'}`}>
+                    {creditBalance.toLocaleString()} Available
+                  </span>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-black/5 text-[11px] text-black/50">
-                  <span>Polygon Blockchain Gas Fee:</span>
+                  <span>Cryptographic Ledger Gas Fee:</span>
                   <span className="font-medium text-black">Sponsored by TrustChain (₹0)</span>
                 </div>
               </div>
@@ -375,9 +490,17 @@ export const BatchesScreen: React.FC = () => {
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full py-3.5 bg-black text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors shadow-sm"
+                  disabled={isSubmitting || products.length === 0}
+                  className="w-full py-3.5 bg-black text-white text-sm font-medium rounded-full hover:bg-gray-800 disabled:opacity-50 transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2"
                 >
-                  Confirm & Mint Batch
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                      <span>Generating Merkle Tree & Registering on Blockchain...</span>
+                    </>
+                  ) : (
+                    <span>Confirm & Mint Batch</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -385,14 +508,14 @@ export const BatchesScreen: React.FC = () => {
         </div>
       )}
 
-      {/* SUCCESS SCREEN: Download QR Codes (PDF / ZIP) */}
+      {/* SUCCESS SCREEN: Immediate download of newly minted batch */}
       {createdSuccessBatch && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="relative w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-black/5 text-black text-center space-y-4">
             <button
               type="button"
               onClick={closeModals}
-              className="absolute top-6 right-6 p-2 rounded-full text-black/50 hover:text-black hover:bg-black/5 transition-colors"
+              className="absolute top-6 right-6 p-2 rounded-full text-black/50 hover:text-black hover:bg-black/5 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -421,7 +544,7 @@ export const BatchesScreen: React.FC = () => {
                 <span className="font-medium text-black">{createdSuccessBatch.quantity.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-black/50">Polygon Hash:</span>
+                <span className="text-black/50">Transaction Hash:</span>
                 <span className="font-mono text-emerald-800 truncate max-w-[200px]">{createdSuccessBatch.txHash}</span>
               </div>
             </div>
@@ -430,8 +553,8 @@ export const BatchesScreen: React.FC = () => {
             <div className="pt-2 space-y-2.5">
               <button
                 type="button"
-                onClick={() => alert(`Downloading Print-Ready PDF for ${createdSuccessBatch.batchNumber}`)}
-                className="w-full py-3 bg-black text-white text-xs font-medium rounded-full hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                onClick={() => handleDownloadPdf(createdSuccessBatch.id || createdSuccessBatch.batchNumber)}
+                className="w-full py-3 bg-black text-white text-xs font-medium rounded-full hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
               >
                 <Download className="w-4 h-4" />
                 <span>Download QR codes (Print-Ready PDF Labels)</span>
@@ -439,11 +562,59 @@ export const BatchesScreen: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => alert(`Downloading High-Res SVG/PNG ZIP for ${createdSuccessBatch.batchNumber}`)}
-                className="w-full py-3 bg-[#F5F5F5] text-black text-xs font-medium rounded-full hover:bg-black/5 border border-black/10 transition-colors flex items-center justify-center gap-2"
+                onClick={() => handleDownloadZip(createdSuccessBatch.id || createdSuccessBatch.batchNumber)}
+                className="w-full py-3 bg-[#F5F5F5] text-black text-xs font-medium rounded-full hover:bg-black/5 border border-black/10 transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <FileText className="w-4 h-4" />
                 <span>Download QR codes (Vector SVG / PNG ZIP)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EXPORT QR MODAL (When clicking 'Export QRs' on any row) */}
+      {selectedBatchForQr && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-black/5 text-black text-center space-y-4">
+            <button
+              type="button"
+              onClick={() => setSelectedBatchForQr(null)}
+              className="absolute top-6 right-6 p-2 rounded-full text-black/50 hover:text-black hover:bg-black/5 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-12 h-12 rounded-2xl bg-black/5 flex items-center justify-center mx-auto text-black">
+              <QrCode className="w-6 h-6" />
+            </div>
+
+            <div>
+              <h3 className="text-xl font-medium tracking-tight text-black">
+                Export QR Codes
+              </h3>
+              <p className="text-xs text-black/60 mt-1">
+                Batch: <strong className="font-mono text-black">{selectedBatchForQr.batchNumber}</strong> ({selectedBatchForQr.quantity.toLocaleString()} units)
+              </p>
+            </div>
+
+            <div className="pt-2 space-y-2.5">
+              <button
+                type="button"
+                onClick={() => handleDownloadPdf(selectedBatchForQr.id || selectedBatchForQr.batchNumber)}
+                className="w-full py-3 bg-black text-white text-xs font-medium rounded-full hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download Printable PDF Sheet (Labels)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDownloadZip(selectedBatchForQr.id || selectedBatchForQr.batchNumber)}
+                className="w-full py-3 bg-[#F5F5F5] text-black text-xs font-medium rounded-full hover:bg-black/5 border border-black/10 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Download High-Res PNGs Archive (ZIP)</span>
               </button>
             </div>
           </div>

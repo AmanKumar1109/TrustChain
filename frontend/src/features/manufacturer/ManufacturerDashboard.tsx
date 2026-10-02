@@ -28,6 +28,14 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
   initialTab = 'overview',
 }) => {
   const [currentTab, setCurrentTab] = useState<ManufacturerTab>(initialTab);
+  const [brandName, setBrandName] = useState<string>('Cipla Healthcare India Ltd.');
+
+  useEffect(() => {
+    const session = (window as any).api?.auth?.getSession?.() || null;
+    if (session?.companyName) {
+      setBrandName(session.companyName);
+    }
+  }, []);
 
   // Sync with URL query or hash if available
   useEffect(() => {
@@ -86,7 +94,7 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
       {/* 2. Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         <ManufacturerTopBar
-          brandName="Cipla Healthcare India Ltd."
+          brandName={brandName}
           onExitDashboard={onExitDashboard}
           onNavigateToVerify={onNavigateToVerify}
         />
